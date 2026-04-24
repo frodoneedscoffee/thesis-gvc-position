@@ -53,7 +53,7 @@ The analysis integrates insights from:
 - Results may be sensitive to measurement of capabilities (especially innovation)
 - Sectoral heterogeneity suggests that effects are not uniform across industries
 
-# Future Research
+# Scope for Future Research
 - Classify industries as upstream vs downstream and test capability-specific effects
 - Use transaction-level or firm-to-firm trade data for better measurement
 - Explore dynamic upgrading paths over time
