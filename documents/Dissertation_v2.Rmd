@@ -1,0 +1,1318 @@
+---
+fontsize: 12pt
+fontfamily: mathpazo
+output:
+  pdf_document:
+    extra_dependencies: ['booktabs', 'float', 'microtype']
+header-includes:
+  - \usepackage{placeins}
+  - \usepackage{array}
+  - \usepackage{setspace}
+  - \setstretch{1.15}
+  - \usepackage{titlesec}
+  - \titleformat{\section}[block]{\fontsize{14}{17}\bfseries\filcenter}{\thesection}{1em}{}
+  - \titleformat{\subsection}{\fontsize{12}{14}\bfseries}{\thesubsection}{1em}{}
+  - \titleformat{\subsubsection}{\fontsize{12}{14}\bfseries}{\thesubsubsection}{1em}{}
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(modelsummary)
+library(kableExtra)
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+options(modelsummary_factory_default = 'kableExtra')    # sets kableExtra default engine for modelsummary
+options('modelsummary_format_numeric_latex' = 'plain')  # prevents conflict with Latex math mode
+
+```
+
+```{r import-data, include=FALSE}
+
+# variable desc
+var_defn_table <- readRDS('F:/r/thesis-gvc-position/output/var-definitions.RDS')
+
+# summary stats
+summ_table <- readRDS('F:/r/thesis-gvc-position/output/summary-stats.RDS')
+summ_table_w <- readRDS('F:/r/thesis-gvc-position/output/summary-stats-winsorized.RDS')
+
+
+# for regression table formatting
+
+  # fixed effects used
+fe_rows <- data.frame(
+  term = c('Industry FE', 'Year FE', 'Industry-Year FE', 'Firm FE'),
+  m1 = c('Yes', 'Yes', 'No', 'No'),
+  m2 = c('No', 'No', 'Yes', 'No'),
+  m3 = c('No', 'No', 'No', 'Yes')
+)
+attr(fe_rows, 'position') <- 'gof_start'  # set FE block before summary stats
+
+  # fit statistics to keep
+fitstats <- list(
+  list('raw' = 'nobs', 'clean' = 'Observations', 'fmt' = 0),
+  list('raw' = 'r.squared', 'clean' = 'R²', 'fmt' = 3),
+  list('raw' = 'adj.r.squared', 'clean' = 'Adjusted R²', 'fmt' = 3),
+  list('raw' = 'r2.within', 'clean' = 'Within R²', 'fmt' = 3)
+)
+
+# load models
+
+  # productivity
+prod1 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_ind_base.rds')
+prod2 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_indyear_base.rds')
+prod3 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_firm_base.rds')
+
+  # liquidity
+liq1 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_ind_liq.rds')
+liq2 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_indyear_liq.rds')
+liq3 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_firm_liq.rds')
+
+  # leverage
+lev1 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_ind_lev.rds')
+lev2 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_indyear_lev.rds')
+lev3 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_firm_lev.rds')
+
+  # capability
+capab1 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_ind_capab.rds')
+capab2 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_indyear_capab.rds')
+capab3 <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_firm_capab.rds')
+
+  # ICT
+ict_adv <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_firm_advict.rds')
+ict_innov <- readRDS('F:/r/thesis-gvc-position/output/gvcpos_firm_innovict.rds')
+
+```
+
+```{r import-robustness}
+
+hausman_table <- readRDS('F:/r/thesis-gvc-position/output/test-hausman.rds')
+bp_table <- readRDS('F:/r/thesis-gvc-position/output/test-bp.rds')
+serialcorr_table <- readRDS('F:/r/thesis-gvc-position/output/test-serialcorr.rds')
+vif_table <- readRDS('F:/r/thesis-gvc-position/output/test-vif.rds')
+
+```
+
+
+```{r import-appendix}
+
+sample_prod1 <- readRDS('F:/r/thesis-gvc-position/output/stats_ind_base.rds')
+sample_prod2 <- readRDS('F:/r/thesis-gvc-position/output/stats_indyear_base.rds')
+sample_prod3 <- readRDS('F:/r/thesis-gvc-position/output/stats_firm_base.rds')
+
+sample_liq1 <- readRDS('F:/r/thesis-gvc-position/output/stats_ind_liq.rds')
+sample_liq2 <- readRDS('F:/r/thesis-gvc-position/output/stats_indyear_liq.rds')
+sample_liq3 <- readRDS('F:/r/thesis-gvc-position/output/stats_firm_liq.rds')
+
+sample_lev1 <- readRDS('F:/r/thesis-gvc-position/output/stats_ind_lev.rds')
+sample_lev2 <- readRDS('F:/r/thesis-gvc-position/output/stats_indyear_lev.rds')
+sample_lev3 <- readRDS('F:/r/thesis-gvc-position/output/stats_firm_lev.rds')
+
+sample_capab1 <- readRDS('F:/r/thesis-gvc-position/output/stats_ind_capab.rds')
+sample_capab2 <- readRDS('F:/r/thesis-gvc-position/output/stats_indyear_capab.rds')
+sample_capab3 <- readRDS('F:/r/thesis-gvc-position/output/stats_firm_capab.rds')
+
+sample_advict <- readRDS('F:/r/thesis-gvc-position/output/stats_firm_advict.rds')
+sample_innovict <- readRDS('F:/r/thesis-gvc-position/output/stats_firm_innovict.rds')
+
+manuf_mapping <- readRDS('F:/r/thesis-gvc-position/output/nic-oecd-final-concordance.rds')
+manuf_mapping <- manuf_mapping %>% 
+  select(isic_code, oecd_code, oecd_recode, desc_nic, desc_oecd) %>% 
+  rename('NIC Code' = isic_code,
+         'OECD Code' = oecd_code,
+         'New Code' = oecd_recode,
+         'Description (NIC)' = desc_nic,
+         'Description (OECD)' = desc_oecd)
+
+```
+
+
+\begin{titlepage}
+    \begin{center}
+        
+        \large
+        DISSERTATION ON
+        
+        \vspace{1cm}
+        
+        \Huge
+        \textbf{Productivity, Credit Access \& Capabilities: What drive GVC upgrading in Indian Manufacturing?}
+        
+        \vspace{1cm}
+        
+        \large
+        M.A. Economics (2024-26) \\
+        (Specialization in International Trade \& Finance) \\
+        
+        \vspace{1.5cm}
+        
+        \large
+        Submitted by \\
+        Srikanya Chakraborty \\
+        Roll No. 59A \\
+        
+        \vspace{0.5cm}
+        
+        \large
+        Under the Guidance of \\
+        Dr. Muhammed Rafi OPC
+
+        \vfill
+        
+        \includegraphics[width=0.4\textwidth]{F:/r/thesis-gvc-position/documents/iift-logo.png}
+        
+        \vfill
+        
+        \large
+        INDIAN INSTITUTE OF FOREIGN TRADE \\
+        IIFT Bhawan, B-21 Qutab Instituitional Area, New Delhi - 110016
+        
+        \vspace{1.5cm}
+        
+    \end{center}
+\end{titlepage}
+
+\newpage
+
+\begin{titlepage}
+    \begin{center}
+        
+        \large
+        MASTER'S THESIS
+        
+        \vspace{1cm}
+        
+        \Huge
+        \textbf{"Productivity, Credit Access \& Capabilities: What drive GVC upgrading in Indian Manufacturing?"}
+        
+        \vspace{1cm}
+        
+        \large
+        A thesis submitted in fulfillment of the requirements \\
+        for the Master's in Economics 2024-2026 degree \\
+        
+        \vspace{1.5cm}
+        
+        \large
+        Submitted by \\
+        Srikanya Chakraborty \\
+        Roll No. 59A \\
+        
+        \vspace{0.5cm}
+        
+        \large
+        Under the Guidance of \\
+        Dr. Muhammed Rafi OPC
+
+        \vfill
+        
+        \includegraphics[width=0.4\textwidth]{F:/r/thesis-gvc-position/documents/iift-logo.png}
+        
+        \vfill
+        
+        \large
+        Indian Institute of Foreign Trade, Delhi \\
+        110016
+        
+        \vspace{1.5cm}
+        
+    \end{center}
+\end{titlepage}
+
+\newpage
+
+\thispagestyle{empty}
+
+\noindent
+\begin{tabular}{|p{0.22\textwidth}|p{0.73\textwidth}|}
+
+    \hline
+    \centering \vspace{0.1cm} \includegraphics[width=0.18\textwidth]{F:/r/thesis-gvc-position/documents/iift-logo.png} & 
+    \centering \vspace{0.1cm} 
+    
+    {
+        \textbf{INDIAN INSTITUTE OF FOREIGN TRADE} \\
+        \textbf{MA (ECO): 2024-26} \\
+        \textbf{RESEARCH PROJECT}
+    } \vspace{0.2cm} \tabularnewline \hline
+
+    \multicolumn{2}{|p{0.95\textwidth}|}{
+        \begin{center}
+            \vspace{0.2cm} \large \textbf{Declaration} \vspace{0.2cm}
+        \end{center}
+        
+        This is to certify that, I, a student of MA (Economics – Specialization in Trade and Finance) [MA (ECO): 2024-26], Indian Institute of Foreign Trade, New Delhi, have submitted this research project titled \textbf{“Productivity, Credit Access \& Capabilities: What drive GVC upgrading in Indian Manufacturing?”} to IIFT in partial fulfillment of the requirements for the MA (ECO) degree. This is an original work. It is neither copied (partially/fully) from any other scholastic work nor submitted to any other institution for any degree or diploma. I remain fully responsible for any error and plagiarism. 
+        
+        \vspace{1.5cm}
+        \begin{flushright}
+            \begin{tabular}{r}
+                \textbf{Srikanya Chakraborty} \tabularnewline
+                \textbf{MA (ECO): 2024-26} \tabularnewline
+                \textbf{New Delhi}
+            \end{tabular}
+        \end{flushright}
+        \vspace{0.2cm}
+    } \tabularnewline \hline
+
+    \multicolumn{2}{|p{0.95\textwidth}|}{
+        \begin{center}
+            \vspace{0.2cm} \large \textbf{Project Guide Certification} \vspace{0.2cm}
+        \end{center}
+        
+        This is to inform that Ms. Srikanya Chakraborty, a student of IIFT MA (Economics) 2024-26, has completed the research project on the topic \textbf{“Productivity, Credit Access \& Capabilities: What drive GVC upgrading in Indian Manufacturing?”} under my guidance.
+        
+        \vspace{1.5cm}
+        \begin{flushright}
+            \begin{tabular}{r}
+                \textbf{Dr. Muhammed Rafi OPC} \tabularnewline
+                \textbf{April, 2026}
+            \end{tabular}
+        \end{flushright}
+        \vspace{0.2cm}
+    } \tabularnewline \hline
+    
+\end{tabular}
+
+\newpage
+
+\begin{center}
+\section*{Acknowledgements}
+\end{center}
+
+I am sincerely grateful to my supervisor, Dr. Muhammed Rafi OPC, for his guidance, insights and consistent support throughout this work. His feedback greatly improved the quality of this dissertation.
+
+I also thank my family and friends for their understanding and encouragement throughout this process — and, last but not the least, the reliable functioning of my laptop at critical moments.
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\listoffigures
+\listoftables
+
+\newpage
+
+# Chapter 1: Introduction
+
+\noindent\hrulefill
+
+## 1.1 Introduction
+
+The structure and patterns of trade have evolved and morphed into something completely new over the last 20 years. While the classical trade theories of Ricardo-Heckshcher-Ohlin explained comparative advantage as the driver of inter-industry trade, Krugman (1980) built on Chamberlin’s model of monopolistic competition to explain the increasing levels of intra-industry trade (IIT) observed in the 1960s by Herbert Grubel and Peter Lloyd, who eventually formulated an index to measure the same. Later, Melitz (2003) showed how heterogeneity affects intra-industry exports; specifically, how exposure to trade induces only the more productive firms within an industry to enter the export market, and promotes the simultaneous exit of less productive firms. Manova (2013) extended this by incorporating financial frictions to show how weak financial institutions lead to fewer destination markets, reduce export product variety and decrease trade volume, especially for firms operating in financially-vulnerable sectors.
+
+As intra-industry trade rises globally, production processes increasingly involve “a sequential, vertical trading chain stretching across many countries, with each country specializing in particular stages of a good’s production sequence” (Hummels et al., 2001). This entails firms importing inputs from abroad to produce their exports. By taking advantage of factor cost disparities across countries, firms “outsource” manufacturing and other business functions without sacrificing any gains from specialization. This fragmentation of production is what Hummels et al. (2001) refer to as "vertical specialization", Gereffi (1999) as "global commodity chains", Grossman and Hansberg (2008) as “trade in tasks” and Baldwin and Ito (2022) as the "second unbundling", i.e., global value chains (GVCs). A 2009 report by the Organisation for Economic Co-operation and Development (OECD) found that country-level vertical specialization had grown between 1995 and 2005 in most countries that accounted for 75% of total global trade. This points to a boom in production fragmentation and rise in GVCs in the early 2000s, possibly driven by the ICT revolution of the late 1990s allowing faster and easier information flow across borders. Today, production in GVCs account for 70% of international trade, with services, raw materials, intermediate parts and components getting exchanged across borders (OECD, n.d.; Stemberger & Kejžar, 2025; Thakur & Sharma, 2025). Countries – and firms – no longer produce the entirety of their final goods; rather, value is added in each stage of a fragmented production process at different geographic locations.
+
+Successful integration into global production network via GVCs is a possible path for economic development and prosperity. However, position in the value chain also matters. By the Smile Curve hypothesis, the highest value that can possibly be captured lies on the extreme ends of the production process: either via R&D and product design (more "upstream" activities, or further away from final demand) or via marketing, branding and distribution (more "downstream" activities) (Antras et al., 2012). The midstream position, usually associated with simple assembly, generates the lowest value-added. However, there is no "ideal" position within the value chain, and benefits can be derived from specializing in assembly activities and performing them at scale like China or Vietnam (Kowalski et al., 2015). Van der Marel (2015) further argues that movement towards either extreme requires specific capabilities: movement upstream requires ICT- and knowledge-based capital, while movement downstream requires reduction in barriers to services trade and labour market efficiency. Finally, movement is only possible if the country's policy environment is conducive to upgrading, as well as the endowments and economic structure of the country.
+
+The literature has identified several drivers of upgrading within GVCs. Governance structures, as emphasized by Gereffi (1999) and Gereffi et al. (2005), shape the opportunities available to firms, while organizational strategy determines how firms position their activities along the value chain (Antras & Chor, 2013). At the same time, trade theory highlights the role of productivity and sunk costs (Manova, 2013; Melitz, 2003), while the literature on financial and management emphasize credit access and firm capabilities such as R&D and marketing (Arneja & Sharma, 2024; Barney, 1999; Linbing et al., 2023; Manova & Yu, 2016; Oh & Hwang, 2025). Despite broad agreement on these factors, the evidence remains dispersed across different theoretical strands, including trade theory, GVC governance, internationalization, and export performance. But overall,
+
+## 1.2 Significance of the Study
+
+The fragmentation of global production is particularly important from a policy perspective, especially for emerging economies like India, where GVC participation has increased but remains weakly linked to systematic upgrading outcomes. Raju and Sharma (2024) note that the "modalities of PLI are not based on value addition but on net sales", increasing the import content of production and discouraging value-addition. But in the absence of a clear GVC-centric policy framework, it becomes difficult to identify which firm-level constraints most effectively shape movement toward higher value-added activities. This raises an important question: what firm-level factors actually enable upgrading within GVCs?
+
+A key limitation in the existing literature is its fragmented nature. Research on GVC upgrading spans multiple domains (trade theory, GVC governance and the resource-based view of the firm) but these strands are rarely integrated into a unified empirical framework. Moreover, much of the empirical evidence is concentrated at the country or industry level, which obscures firm-level heterogeneity. As a result, there is limited understanding of how individual firm characteristics jointly shape upgrading trajectories, especially in developing economies. 
+
+This study addresses these gaps by bringing together insights from different strands of the literature to examine the role of productivity, credit access and firm capabilities in driving upgrading within GVCs. We utilize the measures of backward and forward participation employed by Stemberger and Kejžar (2025) to create a novel firm-level measure of GVC position in the spirit of Koopman et al. (2010), allowing us to interpret position as a measure of "functional upgrading", i.e., the process of acquiring new functions (or abandoning existing ones) to increase the overall skill content of activities (Humphrey & Schmitz, 2002). By focusing on firm-level data from Indian manufacturing, we provide micro-level evidence on the constraints and enablers of upgrading in a major emerging economy, thus contributing to the academic literature and offering insights into how firms can move beyond low value-added assembly toward more sophisticated positions in global production networks.
+
+## 1.3 Research Objectives
+
+- Does firm productivity facilitate movement toward higher value-added segments of global value chains?
+- How do financial constraints (liquidity and leverage) affect a firm’s ability to upgrade within global value chains?
+- What role do firm capabilities — particularly innovation and marketing — play in facilitating GVC upgrading?
+
+## 1.4 Data & Methodology
+
+This study uses firm-level data from the CMIE Prowess database, which provides detailed information on Indian companies, including firmographics, financial statements and trade activity. The sample is restricted to manufacturing firms (NIC divisions 10–33) over the study period. To proxy components that are not directly observable at the firm level, such as intermediate exports, industry-level information from the OECD Inter-Country Input-Output (ICIO) Tables is used.
+
+The key variable of interest is a firm-level measure of GVC position, constructed using indicators of backward and forward participation. By linking this measure to the Smile Curve literature, we capture the distance of the firm's position from low value-added assembly, whether "upstream" (R&D, product design) or "downstream" (marketing, advertising, branding). Firm-level determinants include productivity, financial constraints (measured through working capital and debt burden) and capabilities such as innovation (R&D intensity), marketing (advertising intensity) and ICT usage. Standard firm characteristics such as size and age are included as control variables.
+
+Empirically, the study employs panel data regression techniques to estimate the relationship between these firm-level factors and GVC position, controlling for unobserved heterogeneity across firms and industries. We also conduct diagnostic tests to ensure the robustness of our results. 
+
+## 1.5 Organization of the Dissertation
+
+Here, we outline the organization of the study.
+
+Chapter 2 begins with a review of the literature on global value chains, focusing on the nature of upgrading, the Smile Curve hypothesis, and the roles of productivity, credit access and firm capabilities. It concludes by identifying the key research gaps that motivate this study. Building on this, Chapter 3 develops the theoretical framework and presents the testable hypotheses linking firm-level characteristics to movement within global value chains.
+
+Chapter 4 then describes the data sources, variable construction and empirical strategy used to test these hypotheses. Chapter 5 presents and discusses the empirical results, along with robustness checks and diagnostic tests. Finally, Chapter 6 summarizes the main findings, discusses their policy implications and outlines directions for future research.
+
+\newpage
+
+# Chapter 2: Review of the Literature
+
+\noindent\hrulefill
+\vspace{1em}
+
+This chapter reviews the existing literature on global value chains (GVCs) and their determinants, while also synthesizing the key insights that emerge from it.
+
+Section 2.1 discusses the concept and nature of GVC upgrading, highlighting different perspectives from the literature. Section 2.2 presents the Smile Curve hypothesis as a framework for understanding the distribution of value-added along the production chain.
+
+Sections 2.3, 2.4 and 2.5 then examine the key firm-level drivers of upgrading identified in the literature — namely productivity, credit access, and firm capabilities such as innovation and marketing. Taken together, these strands suggest that upgrading is shaped by a combination of productive efficiency, financial capacity and the ability to build and leverage intangible "VRIN" (valuable, rare, inimitable, non-substitutable) resources, although the evidence remains fragmented across different theoretical approaches.
+
+Finally, Section 2.6 identifies the key gaps in the existing literature, which motivate the empirical analysis undertaken in this study.
+
+## 2.1 The Nature of GVC Upgrading
+
+Upgrading within global value chains has been defined in several ways. Gereffi (1999) identifies it as a move from simple assembly to Original Equipment Manufacturing (OEM) to Original Brandname Manufacturing (OBM). While OEM firms make products to a *buyer*'s specifications to be sold under the *buyer*'s brand, OBM firms take control of the branding and marketing segments of the value chain to capture "brand name rents". These rents arise from control over scarce assets – machinery and capital (tangible assets), brand names (intangible) or marketing skills (intermediate) – which form the basis of comparative advantage in international markets. He further highlights South Korea's automobiles (Hyundai) and electronics (Samsung), and Hong Kong's apparel industry as successfully upgrading through learning effects: by gaining experience and obtaining new knowledge from the lead firms they were previously supplying to. Tokatli and Kizilgün (2004) trace Erak Clothing, a Turkish contractor who moved from OEM (supplying to Calvin Klein, Guess, Esprit) to OMB through international exposure that led to the creation of its own brand: Mavi Jeans.
+
+A complementary perspective is provided by Gereffi et al. (2005), who define upgrading in terms of movement across governance structures within GVCs. In "captive" value chains, knowledge is strictly codified and influential lead/OBM firms actively monitor the "captive" supplier firms. "Hierarchical" chains, on the other hand, give the suppliers more autonomy and force them to “develop the capability to interpret designs, make samples, source the needed inputs, monitor product quality, meet the buyer's price, and guarantee on-time delivery”. This closely resembles "functional upgrading" that Humphrey and Schmitz (2002) define as the process of acquiring new functions or abandoning existing ones to increase the skill content of their activities and enhance value capture. For example, in the 1990s, Brazil's Sino Valley shoe cluster integrated with the US market, with US retail giants becoming responsible for product design and logistics. Despite improved market access and quality upgrading, Brazilian firms were stuck in a captive value chain. Later, when local Brazilian firms moved from just manufacturing to manufacturing *and* logistics, they upgraded by acquiring a new function. Similarly, Taiwanese computer manufacturers in the 1990s began to take up new functions like development of new processes and design over simple assembly (Gereffi, 1999; Humphrey & Schmitz, 2002). 
+
+These perspectives converge on a common insight: upgrading implies increasing control over higher value-added segments of the production process. A parallel can be found in the resource-based view (RBV) of the firm pioneered by Edith Penrose which says that firms can build comparative advantage by possessing and managing "VRIN" (valuable, rare, inimitable, non-substitutable) resources (Arneja & Sharma, 2024; Barney, 1991; Gereffi et al., 2005; Oh & Hwang, 2025), enabling firms to generate the scarce rents that Gereffi (1999) talks about. Within GVCs, upgrading can thus be understood as the process through which firms accumulate and deploy such resources to capture higher rents. There is a certain nuance here, however: Ponte and Ewert (2009) caution that higher value-addition may not necessarily yield better results; taking the case of the South African wine industry, they argue that "reaching a better deal" is equally important in the upgrading process. Further, the *volume* of activity matters as much as the value addition (Kowalski et al., 2015).
+
+At the macro and firm levels, the literature identifies several enabling factors for this process. Cattaneo et al. (2013) provide a strategic framework that countries can adapt to join, upgrade and stay competitive within GVCs, recommending policies that improve financial access and storage facilities, provide logistics support, and foster innovation and promote international best practices to enable upgrading within the chain at the country level. Van der Marel (2015) similarly finds that a country's endowments (GDP per capita, human and ICT capital, internet access), financial credit availability, innovation levels and R&D spending among others are important determinants of its GVC position. At the firm level, Melitz (2003) shows how productive firms self-select into the export markets since they have the capability to bear the upfront "sunk" costs of international trade such as those associated with market research, establishing distribution networks, and modifying products according to cultural expectations. Using Chinese manufacturing data, Manova and Yu (2016) show that higher productivity reduces the the proportion of assembly and processing trade in a firm's total trade value, promoting a shift towards "ordinary trade" where the firm has more control over the production process (such as product design, import and assembly, distribution). They also show how credit constraints, specifically access to working capital and firm debt burden, impede upgrading. Braunerhjelm and Thulin (2008), Choi et al. (2019) and Thakur and Sharma (2025) separately show the importance of R&D spending and innovation in GVC upgrading at the country and industry levels. Marketing investments have a positive impact on exporting firms' performance (Arneja & Sharma, 2024; Linbing et al., 2023). In fact, Arneja and Sharma (2024) find marketing investments to improve exporting firms' performance to a higher extent than R&D investments, signalling that the role of a strong brand identity and visibility in navigating international markets.
+
+Thus, firms can maximize profits by focusing on controlling the "creative heart of the value chain" focusing on high-value activities such as design and branding and outsourcing everything else (Mudambi, 2008). Alternatively, as shown by Antràs and Chor (2012), firms in certain sectors (such as automobiles) may maximize value by integrating downstream stages like assembly and marketing. This is because subsequent investments in each stage of production in such sectors are "complements", so better (upstream) inputs makes downstream investments into assembly and marketing valuable. Organizational decisions – whether to integrate upstream or downstream – allows the firm to choose a *direction* of upgrading, a concept that comes directly from the Smile Curve hypothesis.
+
+## 2.2 The Almighty Smile Curve
+
+Introduced by Acer founder and CEO Stan Shih in the early 1990s, the hypothesis asserts that the share of value-added in manufactured products is shifting from the fabrication stages to pre- (R&D, product design) and post-fabrication (marketing, distribution, logistics) stages. Mudambi (2008) investigates how firms in knowledge-intensive and creative industries manage the location and control of their global value chains, with a case study on the organizational strategies of the mobile handset industry. Since the highest value-added lies in the extreme ends of the production chain, firms like Apple focus on controlling the "creative heart" of the chain (design and marketing — the firms' intangible assets) while outsourcing everything else. Nokia, on the other hand, realizing manufacturing expertise as a key means of enhancing its design skills, choose a vertical integration strategy and integrated manufacturing with higher value-added activities instead of outsourcing the former. 
+
+The general view is that "the smile is deepening", i.e., the value-added in the pre- and post-fabrication stages is increasing while fabrication value-added falls (Baldwin & Ito, 2022). Thus, the middle stages of production or assembly/processing trade increasingly add the least value to the production process; the real value, and hence firm profits, lie in the farther ends of the production process, either upstream towards R&D or downstream towards branding and marketing. In other words, position in the global value chain matters as much as participation; the highest value is found at the two extreme ends: either by specializing "upstream" via intangibles like R&D, product design and innovation, or "downstream" via customer services, marketing and distribution. 
+
+Ito and Vézina (2016) analyze 42 manufacturing industries in the nine nations of Factory Asia (China, Indonesia, Japan, South Korea, Malaysia, Philippines, Singapore, Taiwan and Thailand), finding evidence for the Smile Curve in the electronics and automobiles industries. Rungi and Del Prete (2018) find firm-level evidence for the Smile Curve phenomenon, using data on EU firms. However, they note that the curve is only present when all industries are included; for the manufacturing sector alone, the relationship of value-added to "downstreamness" is largely linear, i.e., such firms generate more value the closer they are to final consumption. Baldwin and Ito (2022) investigate how value added has shifted along the value chain with regard to Asian exports (Indonesia, Malaysia, the Philippines, Singapore, Thailand, China, Taiwan, South Korea and Japan) and the US across 76 different industries. They find the phenomenon present in almost all manufacturing industries, including machinery, transport equipment, chemicals, textiles, and food and beverages, although it is "deeper for some nations". Hernández-Rodríguez et al. (2025) complement this by using economic complexity to create a hierarchy of functions in the EU context, identifying high-skilled engineering and professional roles as complex, high-value activities compared to low-complexity occupations (customer services and sales clerks, drivers, mobile-plant operators) in industries like logistics and manufacturing. Thus, countries — and firms — are significantly more likely to upgrade into new functions that are "related" to their existing set of capabilities, making functional upgrading difficult as more complex functions require a range of rare, hard-to-imitate capabilities.
+
+Conversely, Van der Marel (2015) challenges the Smile Curve phenomenon, arguing that a country’s GVC participation rate and market size are stronger determinants of domestic value-added (DVA) than its position. Studying a panel of 58 countries which includes both developed nations (USA, China, Japan, Germany, France, Italy, UK, Russia) and emerging markets (Argentina, Brazil, India, Indonesia, Mexico, Thailand, Vietnam, South Africa), he finds that value-added shares at the extremes are *not statistically different* from the value-added share of countries positioned in the middle of the production chain. At the same time, a country's GVC participation rate is important in determining the domestic value-added share: larger economies with low GVC participation rates tend to have higher DVA. This focus on volume is supported by Kee and Tang (2016), who attribute China’s rising DVA to the substitution of domestic for imported materials rather than shifts along a U-shaped curve. Finally, Trienekens (2012), citing previous works, notes that while moving to high-value ends (branding and marketing) is a primary upgrading goal, lead firms often actively block functional upgrading to protect their own core competencies. This is confirmed by Giuliani et al. (2005) in their study of Latin American clusters; lead firms in apparel and footwear are likely to impede functional upgrading (while allowing product and process upgrading), while those in automobiles and electronics rarely assisted suppliers directly. Lead firms in software, however, favour functional upgrading due to higher "collective efficiency".
+
+Taken together, the literature suggests that while the Smile Curve provides a useful framework for understanding the distribution of value-added along GVCs, its empirical relevance varies across industries, countries and levels of aggregation. While some studies emphasize the importance of position in determining value capture, others highlight the role of participation intensity and structural characteristics. But they are not mutually exclusive; as we will see in the following subsections of the drivers of upgrading, where a firm is located in the value chain and its ability to move within it are shaped by underlying firm-level capabilities and constraints. There are two possible directions for upgrading: either upstream and *away* from final demand, or downstream and *towards* final demand. Either case constitutes a movement away from assembly (the midstream position). However, there is no single "ideal" spot on the value chain, and since GVC organization is sector-specific, there is no "one-size-fits-all" solution (Cattaneo et al., 2013). Movement towards an upstream position requires ICT- and knowledge-based capital, while movement downstream requires reduction in barriers to services trade and labour market efficiency (Van der Marel, 2015).
+
+## 2.3 Productivity & the Ability to Bear the Sunk Costs of Trade
+
+In his seminal work, Melitz (2003) shows how highly productive firms are more likely to self-select into the export market. This is because they are better equipped to bear the "sunk market entry costs" that come with entering the international market. These include information costs (finding and informing foreign buyers about the product and learning about the foreign market), compliance costs (testing, packaging and labeling requirements to conform to foreign standards), and logistics costs (setting up new distribution channels and conforming to shipping rules specified by customs). Entry into export markets offers new profit opportunities only to firms that can afford to cover this entry cost.
+
+Once a firm successfully enters the export market, it can refine its core resources through international exposure, a phenomenon called "learning by exporting" (Arneja & Sharma, 2024; Stemberger & Kejžar, 2025). This exposure often induces strategic investments in intangible assets such as R&D and marketing, as firms must adapt their products and processes to meet stringent global standards and diverse cultural preferences. Arneja and Sharma (2024), in their study of Indian manufacturing firms, find that export-induced R&D and marketing investments actually improve firms' export performance. The decision to export triggers changes in both marketing and R&D expenditures which subsequently leads to higher value-added, with the former having a bigger impact. Thakur and Sharma (2025), using data on 14 Indian manufacturing industries (including food processing, textiles & apparel, transport equipment, electronics, electricals & machinery), further show that improving industrial GVC position can foster innovation. Stemberger and Kejžar (2025) complement this: in their study of Slovenian firms, GVC involvement is observed to increase firm productivity, driven mainly by forward linkages. Together, this points to a cumulative process in which productivity not only enables export entry but is itself enhanced through participation in global markets.
+
+These productivity gains play a central role in enabling functional upgrading within GVCs. As firms accumulate and improve their capabilities, they are become increasingly positioned to move away from low value-added assembly activities toward more sophisticated and skill-intensive functions. Manova and Yu (2016), using Chinese manufacturing data, show that more productive firms engage less in assembly and processing trade and are more likely to shift toward “ordinary trade,” where they exert greater control over design, sourcing and distribution. Kowalski et al. (2015) argue that while participation brings productivity gains, upgrading is more likely to be successful when countries utilize these productivity benefits to diversify into "more sophisticated" exports. This is supported by evidence from Central Eastern European (CEE) countries: Kordalska and Olczyk (2023) find that while Poland and Slovakia are "stuck" in low value-added fabrication, the rest have specialized into higher value-added functions by building comparative advantage in high-value functions (for e.g. the Baltic states are specialized in management services, the Czech Republic and Slovenia in R&D), enabling them to create more sophisticated, skill-intensive exports. The shift to upstream sectors in GVCs requires higher productivity of skilled workers, which improves company profits and increases the wages of skilled workers, creating a positive feedback loop between the proportion of skilled workers employed, the ability to acquire complex functions, GVC upgrading and firm profits. Note, however, that even conducting basic, unsophisticated assembly *at scale* is beneficial, indicating that the *volume* of activity matters as much as the value addition (Kowalski et al., 2015). This in turn requires higher productivity to achieve.
+
+The literature, thus, suggests a dual role of productivity in the upgrading process: as a selection mechanism determining entry into export markets, while also being enhanced through participation and learning. Upgrading within GVCs means acquiring rare, inimitable functions or "VRIN" resources to build comparative advantage and facilitate movement toward more profitable segments of the value chain, and productivity is a key enabler of acquiring such functions or resources.
+
+## 2.4 Credit Access as a Major Constraint
+
+Building on the work of Melitz, Manova (2013) shows how financial market frictions restrict trade as exporters require external capital to cover both fixed and variable costs. Berman and Héricourt (2010) test this at the firm-level for 5000 firms in 9 developing and emerging economies, finding that productivity is only a significant determinant of the export decision if the firm has a sufficient access to external finance. This highlights that financial access conditions the effect of productivity on trade participation. Similar evidence from Indian manufacturing (Reddy & Sasidharan, 2021) chows that financial constraints reduce GVC participation, particularly for smaller "MSME-like" firms. Consistent with this, Arneja and Sharma (2024) find a positive effect of liquidity on a firm's export decision, highlighting the importance of financial strength in conducting international trade.
+
+Financial constraints remain important even after firms enter global value chains, shaping their ability to upgrade within them. Cattaneo et al. (2013) identify access to finance as a primary supply-side constraint affecting firms' ability to move up the value chain, based on a survey of supplier firms in developing countries where 52% of the firms identified financial access as a serious national-level issue. Van der Marel (2015) also identifies financial credit availability as a major factor associated with a country's position in the supply chain (although it is not statistically significant), with Kowalski et al. (2015) supporting this view and recommending enhancing capital availability as a major policy instrument to improve a country's GVC integration. These findings suggest that finance is not just a prerequisite for entry, but also a continuing constraint on firms’ ability to reposition themselves within the value chain.
+
+At the firm level, the mechanism through which financial constraints affect upgrading operates primarily through working capital requirements. Manova and Yu (2016) use Chinese manufacturing firm data to show how limited access to capital poses a constraint and determines exporters' choice of trade regime. Specifically, both reduced working capital and firm debt burden significantly reduce a firm's ability to perform "ordinary trade", forcing them into assembly/processing roles. Ordinary trade requires high working capital since the firm pays for product design, domestic and foreign inputs, import duties on foreign inputs, final assembly and distribution abroad; so a financially unhealthy firm would be less-equipped to deal with such upfront "sunk" costs and be hindered in its upgrading ability. Supporting this, Minetti and Zhu (2011), using a survey of Italian firms, show how credit rationing hinder a firm's exports at both the extensive and intensive margins. They find that credit rationing has a statistically significant negative effect on foreign sales (the intensive margin), dropping by more than 38%. Credit constraints reduce overall sales of the firm, but foreign sales drop to a higher extent than domestic sales, with the coefficient of the latter being only half of that on foreign sales. However, some studies report weaker results: Berman and Héricourt (2010), using a cross-country panel of firms, find that the effect of financial access (measured as cashflow over total asset) is insignificant for the intensive margin of trade (how much is exported). This suggests that the impact of credit constraints may vary across contexts, given firm characteristics.
+
+The literature indicates that financial access acts as a binding constraint on both participation in and upgrading within GVCs. While productive firms may possess the required resources to upgrade into higher value-added activities, lack of access to external credit can prevent them from doing so. Thus, credit availability is a critical enabling condition that determines whether firms can translate their productive potential into actual upgrading within global value chains.
+
+## 2.5 Firm Capabilities in R&D and Marketing
+
+Firm-level capabilities — particularly innovation and marketing — play a central role in both GVC participation and upgrading. Building on the Smile Curve framework, Mudambi (2008) shows that the highest value-added activities in global value chains are concentrated at the upstream (R&D and product design) and downstream (branding and marketing) ends. This is illustrated through Apple's control of the R&D-intensive chip design and marketing-intensive brand management, letting Apple extract a disproportionate share of value-added. Consistent with this, Kordalska and Olczyk (2023) identify R&D, marketing and management as high value-added business functions within GVCs due to their high skill-intensity, and are supported by Cattaneo et al. (2013). 
+
+Innovation is a key driver of upstream upgrading. Export participation often induces firms to invest in R&D in order to improve product quality and meet global standards. Arneja and Sharma (2024) show that Indian manufacturing firms increase R&D investments following export entry leading to higher value-added. In fact, before entry, R&D increases value-added by only 0.44-0.45% for each 10% rise in R&D, but jumps to 0.91% post-entry. At the country-level, Choi et al. (2019) argue that innovative activities decrease the cost of conducting high-skilled tasks and allow upgrading, finding that a higher number of patent applications is closely linked to intermediate production rather than assembly, highlighting innovation's role in upgrading. Reddy et al. (2020) find innovation to be a driver of GVC integration at the country-level. However, Thakur and Sharma (2025), studying Indian manufacturing industries, highlight that excessive participation without corresponding investments in R&D can lead to a “captive effect,” where innovation actually *declines* after a certain level of participation. Thus, active capability-building, rather than participation alone, is necessary for upgrading. At the macro level, increased R&D intensity is strongly associated with higher export sophistication and comparative advantage (Braunerhjelm & Thulin, 2008; Zhu & Fu, 2013). In fact, Braunerhjelm and Thulin (2008) find that a 1% increase in R&D is associated with a 3% increase high-tech exports and creation of comparative advantage at the country-level.
+
+Complementing innovation, marketing and other market-facing capabilities are crucial for downstream upgrading. Linbing et al. (2023) show that marketing innovation (through new strategies for branding, advertising and customer engagement) enhances firm performance by expanding market access and increasing demand. Importantly, participation in GVC marketing activities does not automatically translate into higher profits; it is the firm’s ability to internalize and innovate upon this knowledge that drives value capture. This is illustrated by Roy and Thorat (2008) who document how institutional marketing support through Mahagrapes enabled small horticulture producers in India to access export markets and move into higher value-added downstream segments. They highlight the role of technical assistance, specialized input provision and market information as key to this success. In fact, marketing investments may actually be a more important driver of upgrading that innovation; Arneja and Sharma (2024) find the latter to have twice the impact on export performance than R&D investments. These findings highlight the importance of marketing capability in capturing value at the final stages of the production chain.
+
+Emerging evidence also points to the growing importance of digital capabilities as a source of upgrading. Oh and Hwang (2025), in the context of South Korean SMEs, show that the adoption of Industry 4.0 technologies (IoT sensors, 3D printing, smart factories) enhances both productivity and market access, enabling firms to upgrade through both innovation and marketing channels. These capabilities can function as “VRIN” resources, providing sustained competitive advantage in global markets. 
+
+At the same time, the impact of capabilities varies across sectors and modes of GVC participation. Arora (2023), highlights the importance of backward linkages in medium-tech industries such as automobiles, where access to high-quality imported inputs supports production but may not necessarily drive innovation. In contrast, Ray and Miglani (2020) show that sectors with stronger lead firm engagement are more likely to experience technology transfer and upgrading. They point to the unsuccessful GVC integration of the textile sector and note the lack of functional upgrading in pharmaceuticals due to low drug discovery. This suggests that the effectiveness of innovation and marketing capabilities depends on the broader structure of the value chain.
+
+Overall, the literature indicates that firm capabilities — particularly innovation and marketing — are central to upgrading within GVCs. While innovation enables firms to move upstream into knowledge-intensive activities, marketing capabilities allow them to capture value downstream. The development and deployment of these capabilities, often complemented by digital technologies, determine whether firms can transition from low value-added assembly to more sophisticated and profitable segments of the value chain.
+
+## 2.6 Research Gap
+
+Despite a rich and growing body of literature on global value chains, several important gaps remain. First, the existing literature is fragmented across multiple theoretical strands — trade theory, GVC governance, resource-based view — each emphasizing different aspects of upgrading without integrating them into a unified framework. While studies following Melitz (2003) focus on firm heterogeneity and selection into export markets, the GVC literature emphasizes governance structures and functional upgrading (Gereffi, 1999; Gereffi et al., 2005; Giuliani et al., 2005; Humphrey & Schmitz, 2002; Tokatli & Kizilgün, 2004) while management approaches highlight the role of firm capabilities and “VRIN” resources (Barney, 1999; Kordalska and Olczyk, 2023; Oh & Hwang, 2025). However, there is limited work that formally synthesizes these perspectives into a coherent framework explaining the role of firm-level characteristics in GVC upgrading.
+
+Second, much of the empirical literature operates at the country (Baldwin & Ito, 2022; Braunerhjelm & Thulin, 2008; Cattaneo et al., 2013; Hernández-Rodríguez et al., 2025; Ito & Vézina, 2016; Kordalska and Olczyk, 2023; Kowalski et al., 2015; Van der Marel, 2015; Zhu & Fu, 2013) or industry (Arora, 2023; Baldwin & Ito, 2022; Giuliani et al., 2005; Ito & Vézina, 2016; Thakur & Sharma, 2025) level, focusing on aggregate measures of participation and value-added. While these studies provide important broad-level insights, they hide within-sector firm heterogeneity. Firm-level evidence on upgrading — particularly in developing economies — remains relatively limited, and existing studies often focus on specific channels such as productivity, finance or innovation in isolation rather than examining them jointly.
+
+This gap is particularly pronounced in the Indian context. Although a growing body of work examines India’s integration into global value chains (Manghnani et al., 2021; Ray & Miglani, 2020; Reddy & Sasidharan, 2021; Thakur & Sharma, 2025), there is limited firm-level empirical on the determinants of upgrading within these chains. Given the highly heterogeneous structural characteristics of Indian manufacturing, understanding the firm-level drivers of upgrading becomes important.
+
+This study addresses these gaps by developing a unified empirical framework that integrates insights from trade theory, GVC governance and the resource-based view to analyze upgrading at the firm level. Specifically, it examines how three key factors — productivity, financial capacity, and firm capabilities such as innovation and marketing — jointly shape firms’ movement within global value chains. We further analyze the role of Information & Communication Technology (ICT), realizing its importance in today's modern, hyper-connected production networks. By focusing on firm-level data from India, the study contributes to the literature by providing micro-level evidence on the determinants of GVC upgrading in a major emerging economy.
+
+\newpage
+
+# Chapter 3: Theoretical Background & Contribution
+
+\noindent\hrulefill
+\vspace{1em}
+
+This chapter develops the theoretical framework underlying the analysis of firm-level upgrading within GVCs, drawing on two complementary strands of firm-level theory to formalize how firms position themselves and move within the value chain.
+
+First, building on the framework of Antràs and Chor (2012), GVC organization is conceptualized as a continuum of tasks, where firms choose their position along different stages of production. This provides a structural lens through which upgrading can be understood as movement along this continuum, either upstream toward knowledge-intensive activities or downstream toward market-facing ones.
+
+Second, the model incorporates insights from Melitz (2003), which describe firm behavior in international markets under heterogeneity. Firms differ in productivity, drawn from an underlying distribution, which determines both their cost structure and their ability to engage in higher value-added activities. Extending this framework, the analysis focuses on value-added rather than profits per se, using basic accounting identities to link firm revenues, costs and value creation.
+
+Within this setup, upgrading is driven by the firm’s profit-maximizing behavior. Movement toward higher value-added positions involves a trade-off between the "marginal benefit of upgrading" which arises from greater value capture, and the "marginal cost of upgrading" which arises from the increasing complexity, capability requirements and the financial burden of operating in such advanced segments of the value chain. As firms move away from low value-added assembly activities, the marginal cost of upgrading is assumed to rise *faster* than the marginal benefit, implying that only firms with sufficiently high productivity and capabilities can sustain such a movement.
+
+The framework thus highlights that upgrading is not automatic but contingent on firm-level characteristics, with productivity, financial capacity and capabilities determining whether firms can overcome the rising costs associated with moving toward more sophisticated and higher value-added production segments.
+
+## 3.1 Hypothesis 1: Productivity facilitates movement up the value chain.
+
+We define the various production stages in the value chain as a linear continuum of tasks indexed by $z$ similar to Antras and Chor (2013): 
+$$
+z \in [0, 1] \tag{1.1}
+$$ 
+We further define the distance from the midpoint of the production chain (assumed to be least value-added simple assembly, by Smile Curve hypothesis) to be $z_{m}$ as follows: 
+$$
+z_{m} = z \pm 0.5 \tag{1.2}
+$$ 
+Each firm $i$ chooses its position $z$ at some time period $t$, and in effect, $z_{m}$ or the distance from the midpoint. We further assume that each position from has some intrinsic value-added potential $f(z_{m})$ regardless of the characteristics of the firm operating it. The $i$th firm exploits this potential based on its productivity $\phi_{it}$ which itself is drawn from a gamma distribution *prior* to joining the international production chain (Melitz, 2003). Hence, $i$th firm's value-added at a distance $z_{m}$ from the midpoint: 
+$$
+VA_{it} = \phi_{it} \cdot f(z_{m}) \tag{1.3}
+$$ 
+Each position $z_{m}$ is further assumed to have an intrinsic operating cost $c(z_{m})$, and the $i$th firm's operating cost is determined by its productivity $\phi_{it}$. Specifically, higher firm productivity lowers the operating cost of the firm with a cost function similar to Melitz (2003): 
+$$
+C_{i}(z_{m}) = \frac{c(z_{m})}{\phi_{it}} \tag{1.4}
+$$ 
+By the Smile Curve hypothesis, both value-added and operating cost are lowest at the midpoint. Movement to either extreme would give the firm higher profits by increasing its value-added, but there exists a cost associated with such movement. We assume that the "marginal cost of moving" *rises faster* than the "marginal benefits from moving", i.e.: 
+$$
+\frac{d}{dz_{m}} \left( \frac{c'(z_{m})}{f'(z_{m})} \right) > 0 \tag{1.5}
+$$ 
+Using a simple accounting identity (Ito & Vézina, 2016), we can relate the $i$th firm's profit to its value-added as follows: \begin{align}
+\pi_{it} &= \text{Revenue}_{it} - \text{Cost}_{it}  \nonumber \\
+&= VA_{it} + \text{Cost of intermediates} - \text{Costs other than intermediates} \nonumber \\
+&= VA_{it}(z_{m}) - c_{it}(z_{m}) \nonumber \\
+&= \phi_{it} \cdot f(z_{m}) - \frac{c(z_{m})}{\phi_{it}} \tag{1.6}
+\end{align} 
+The $i$th firm's problem is to maximize this profit given its position $z_{m}$ within the value chain, i.e.: 
+\begin{align}
+\text{max } \pi_{it}(z_{m}) &= VA_{it}(z_{m}) - c_{it}(z_{m}) \nonumber \\
+&= \phi_{it} \cdot f(z_{m}) - \frac{c(z_{m})}{\phi_{it}} \tag{1.7}
+\end{align} 
+which gives us the following first-order condition: 
+$$
+\frac{d \pi_{it}}{dz_{m}} = 0 \implies \phi_{it} \cdot f'(z_{m}) = \frac{c'(z_{m})}{\phi_{it}} \tag{1.8}
+$$ 
+As $c'(z_{m})$ rises faster than $f'(z_{m})$ for any given movement away from the midpoint, the $i$th firm has to increase its productivity $\phi_{it}$ to operate at that new $z_{m}$ of its choosing. Hence, movements away from the midpoint is facilitated by increase in productivity. Rearranging, we have: 
+$$
+\frac{c'(z_{m})} {f'(z_{m})} = \phi_{it}^2 \tag{1.9}
+$$ 
+The LHS is the marginal cost of movement over the marginal benefit, and may be interpreted as the "difficulty" of a given position $z_{m}$ on the value chain. The RHS is the firm's own capability dependent on its productivity $\phi_{it}$. Thus, at equilibrium, a firm $i$ chooses a position $z_{m}$ such that its capabilities exactly match the difficulty of the position.
+
+## 3.2 Hypothesis 2: Credit constraints impede movement up the value chain.
+
+To move from one position to another, a firm $i$ has to bear the associated cost. In the previous case, we assumed that the firm had enough internal resources to fund its upgrading. However, this is often not the case in the real world; firms often have to rely on external financing to undertake more skill-intensive, higher value-added activities. Let us denote the cost associated with upgrading to be $F(z_{m}, \phi_{it})$ such that: 
+$$
+\begin{aligned}
+\frac{\partial F(z_{m}, \phi_{it})}{\partial z_{m}} > 0 
+\end{aligned} \tag{2.1}
+$$ 
+$$
+\begin{aligned}
+\frac{\partial F(z_{m}, \phi_{it})}{\partial \phi_{it}} > 0 
+\end{aligned} \tag{2.2}
+$$ 
+This implies that the upgrading cost increases as move further away from the midpoint position denoting simply assembly, since movement either upstream or downstream means creating and managing scarce VRIN resources to build comparative advantage. But as productivity rises, the firm will tend to choose a higher position on the value chain (1.8) since its capabilities increase (1.9).
+
+Next, we introduce credit constraints. The cost of movement to high value activities is constrained by the financial health of the firm: its internal funds and the extent to which it can borrow externally. If the $i$th firm has internal funds worth $W_{it}$, and assuming it can borrow upto $\lambda$ times its internal funds, we have the following constraint on its upgrading capacity: 
+$$
+F(z_{m}, \phi_{it}) \leq (1 + \lambda) \cdot W_{it} \tag{2.3}
+$$ 
+A highly productive firm *wants* to upgrade and move farther away from the midstream position, but it is limited in the process due to lack of access to easy external credit. Hence, the $i$th firm's problem becomes: 
+$$
+\begin{aligned}
+\text{max } \pi_{it} = \phi_{it} \cdot f(z_{m}) - \frac{c(z_{m})}{\phi_{it}} \text{ subject to } F(z_{m}, \phi_{it}) \leq (1 + \lambda) \cdot W_{it} 
+\end{aligned} \tag{2.4}
+$$ 
+The Langrangian and the corresponding FOC are: 
+\begin{align}
+L &= \pi_{it} + \mu \cdot [(1 + \lambda) \cdot W_{it} - F(z_{m}, \phi_{it})] \nonumber \\
+&= \phi_{it} \cdot f(z_{m}) - \frac{c(z_{m})}{\phi_{it}} + \mu \cdot [(1 + \lambda) \cdot W_{it} - F(z_{m}, \phi_{it})] \tag{2.5}
+\end{align} 
+$$
+\frac{\partial \pi_{it}}{\partial z_{m}} = 0 \implies \phi_{it} \cdot f'(z_{m}) = \frac{c'(z_{m})}{\phi_{it}} + \mu \cdot F'(z_{m}, \phi_{it}) \tag{2.6}
+$$ 
+Thus, the marginal cost of movement *increases* with credit constraints. Since $|c'(z_{m})| > |f'(z_{m})|$, i.e., marginal cost rises faster than marginal benefit, for any given $z_{m}$, the firm now has to raise its productivity even further to upgrade when credit constraints are present as opposed to when they are not. Hence, when access to credit is limited, a firm may be forced to choose a lower position on the value chain despite high productivity.
+
+## 3.3 Hypothesis 3: Innovation & brand identity facilitate upgrading by creation of scarce resources.
+
+Moving up the value chain requires creation of scarce VRIN resources that can generate rent and build competitive advantage over peers. Two ways suggested in the literature are R&D and marketing investments; while the former moves the firm upstream to capture value generated through innovation and technology, the latter moves the firm downstream and allows value capture via branding and advertising.
+
+We assume that every firm has some R&D and/or advertising capability that it can leverage in its quest to upgrade. This is given by the following "capability" function which firm's overall capabilities rise as they are able to undertake more and more R&D and advertising expenditures (2.8). 
+$$
+h(A_{it}, R_{it}) = \gamma_{A} \cdot A_{it} + \gamma_{R} \cdot R_{it}; \text{ } \frac{\partial h}{\partial A_{it}}, \frac{\partial h}{\partial R_{it}} > 0 \tag{3.1}
+$$ 
+Thus, the additional return or "rent" from investing in these capabilities and moving up is the product of the capability function and the extent of the movement $z_{m}$, giving us the following profit function: 
+\begin{align}
+\pi_{it} &= \phi_{it} \cdot f(z_{m}) + h(A_{it}, R_{it}) - \frac{c(z_{m})}{\phi_{it}} \nonumber \\
+&= \phi_{it} \cdot f(z_{m}) + z_{m} \cdot (\gamma_{A} \cdot A_{it} + \gamma_{R} \cdot R_{it}) - \frac{c(z_{m})}{\phi_{it}} \tag{3.2}
+\end{align} 
+Hence, the firm's problem becomes: 
+$$
+\text{max } \pi_{it} = \phi_{it} \cdot f(z_{m}) + z_{m} \cdot (\gamma_{A} \cdot A_{it} + \gamma_{R} \cdot R_{it}) - \frac{c(z_{m})}{\phi_{it}} \tag{3.3}
+$$ 
+which yields the following FOC: 
+$$
+\frac{\partial \pi_{it}}{\partial z_{m}} = 0 \implies \phi_{it} \cdot f'(z_{m}) + (\gamma_{A} \cdot A_{it} + \gamma_{R} \cdot R_{it}) = \frac{c'(z_{m})}{\phi_{it}} \tag{3.4}
+$$ 
+Thus, investments into R&D and advertising raise the marginal benefits from moving up the value chain towards more skill-intensive positions. Marginal cost rises faster than marginal benefits, but since the LHS contains the marginal effects from other firm capabilities, the burden of upgrading is reduced and less than when the firm was relying solely on its productive efficiency (1.8 & 1.9).
+
+\newpage
+
+# Chapter 4: Data & Empirical Strategy
+
+\noindent\hrulefill
+\vspace{1em}
+
+This chapter describes the data sources, variable construction and empirical strategy used to test the hypotheses developed in the previous chapter. It begins by outlining the firm-level and industry-level datasets used in the analysis, followed by a detailed discussion of the construction of key variables (summarized in Table 1). The chapter then presents the empirical framework employed to examine the relationship between firm-level characteristics and upgrading within global value chains.
+
+## 4.1 Data
+
+The primary data source for firm-level variables is CMIE Prowess which encompasses information on Indian firms including firmographics (NIC code, year of incorporation, location of head office, business group affiliation etc), annual financials and export/import activities. We restrict our sample to the manufacturing firms encompassing NIC divisions 10 through 33. 
+
+Since firm intermediate exports is not available in the dataset, we rely on industry-level proxies calculated from the OECD Inter-Country Input-Output (ICIO) Tables (OECD, 2024a; OECD, 2024b) spanning the years 1995 to 2022, which is also the time period of our study.
+
+## 4.2 Variable Construction
+
+### 4.2.1 GVC Position
+
+GVC-centric studies are largely country-level (Baldwin & Ito, 2022; Braunerhjelm & Thulin, 2008; Cattaneo et al., 2013; Hernández-Rodríguez et al., 2025; Ito & Vézina, 2016; Kordalska and Olczyk, 2023; Kowalski et al., 2015; Van der Marel, 2015; Zhu & Fu, 2013) or industry-level (Arora, 2023; Baldwin & Ito, 2022; Gereffi, 1999; Giuliani et al., 2005; Humphrey & Schmitz, 2002; Ito & Vézina, 2016; Mudambi, 2008; Ponte & Ewert, 2009; Thakur & Sharma, 2025), leveraging sectoral and world input-output tables. Measuring GVC position at the firm level poses a unique challenge: absence of inter-firm input-output tables. Stemberger & Kejžar (2025) create novel firm-level measures of backward and forward GVC participation using the logic of Koopman et al. (2010), allowing us to create an index of GVC position. Stemberger & Kejžar (2025) derive the firm-level accounting identity for Koopman et al. (2010)’s country-level measures breaking down the $i$th firm's total sales as follows: 
+\begin{align}
+TS_{it} &= \text{payments to all factors} + \text{payments to all intermediate inputs} \nonumber \\
+&= VA_{it} + \text{cost of domestic input + cost of imported inputs} \nonumber \\
+&\quad + \text{cost of imported consumption goods} \nonumber \\
+&= (\pi_{it} + w \cdot L_{it} + r \cdot K_{it}) + M_{it}^D + M_{it}^{IM} + CG_{it}^{IM} \tag{4.1.1}
+\end{align} 
+Imported inputs may have domestic content while domestic input may have foreign content. This lets us define the following terms:
+
+-   Domestic content embodied in imported input = $\delta^D$
+-   Foreign content embodied in imported input = $q^F$
+-   Domestic content embodied in domestic input = $q^D$
+-   Foreign content embodied in imported input = $\delta^F$
+-   Domestic content embodied in imported consumption goods = $\delta^{D,CG}$
+-   Foreign content embodied in imported consumption goods = $q^{F,CG}$
+
+We break down the firm total sales as follows: 
+\begin{align}
+TS_{it} &= DVA_{it} + FVA_{it} \nonumber \\
+&= VA_{it} + q_{it}^D + M_{it}^{IM} + CG_{it}^{IM} + \delta_{it}^F \tag{4.1.2}
+\end{align} 
+The domestic value-added of a firm $i$ is the sum of its own value-added $(VA_{it})$, the domestic content in domestic input $(q_{it}^D)$, the domestic content in imported input $(\delta_{it}^D)$ and domestic input in imported consumer goods $(\delta_{it}^{D,CG})$, i.e.: 
+$$
+DVA_{it} = VA_{it} + q_{it}^D + \delta_{it}^D + \delta_{it}^{D,CG} \tag{4.1.3}
+$$ 
+Similarly, the foreign value-added of a firm $i$ is the sum of imported inputs $(M_{it}^{IM})$, imported consumer goods $(CG_{it}^{IM})$ and foreign content in imported inputs $(\delta_{it}^F)$ minus any domestic content in foreign input $(\delta_{it}^D)$ and domestic content in imported consumer goods $(\delta_{it}^{D,CG})$, i.e.: 
+$$
+FVA_{it} = M_{it}^{IM} + CG_{it}^{IM} - \delta_{it}^D - \delta_{it}^{D,CG} + \delta_{it}^F \tag{4.1.4}
+$$ 
+Stemberger and Kejžar (2025) make a proportionality assumption: the distribution of a firm’s inputs towards the production to be exported is proportional to the share of exports in total sales. The ratio of the domestic (or foreign) component in the domestic input, as well as the ratio of foreign (or domestic) component in the foreign input is thus constant, i.e.: 
+$$
+\frac{\delta_{it}^F}{M_{it}^D} = \frac{\delta_{it}^D}{M_{it}^{IM}} = \frac{\delta_{it}^{D,CG}}{CG_{it}^{IM}} = \frac{EX_{it}}{TS_{it}} \tag{4.1.5}
+$$ 
+Backward participation (BP) is the extent to which a firm’s exports rely on imported inputs and captures the VA from foreign input embedded in the firm’s exports (sourcing/buyer side), i.e., foreign input reliance in own production. With assumption 4.5, we have the following formula for backward participation: 
+\begin{align}
+BP_{it} &= \frac{FVA_{it}}{EX_{it}} \cdot \frac{EX_{it}}{TS_{it}} = \frac{FVA_{it}}{TS_{it}} \nonumber \\
+&= \frac{M_{it}^{IM} + CG_{it}^{IM} - \delta_{it}^D - \delta_{it}^{D,CG} + \delta_{it}^F}{TS_{it}} \tag{4.1.6}
+\end{align} 
+Stemberger and Kejžar (2025) omit the last three terms partly due to data constraints. The negative terms $(\delta^D \text{ and } \delta^{D,CG})$ are the domestic content embedded in imported inputs (circularity in the production chain) and assumed to be negligible; the final term represents the foreign content embodied in domestic inputs and omitting it may bias backward participation downwards, a fact acknowledged by the authors. Hence, we finally have: 
+$$
+BP_{it} = \frac{FVA_{it}}{TS_{it}} = \frac{M_{it}^{IM} + CG_{it}^{IM}}{TS_{it}} \tag{4.1.7}
+$$ 
+Next, forward participation (FP) is the extent to which a firm’s exports are used as input in the exports of foreign firms (value addition by the domestic firm) through intermediate goods or services. DVA exports can be classified into the following categories Stemberger and Kejžar (2025):
+
+1.  Final good exports
+2.  Exported as intermediates absorbed in destination (intermediates used for production in destination and then consumed there)
+3.  Exported as intermediates further re-exported to a third country (say, Germany exports auto parts to India who assembles them and exports to the US)
+4.  Exported as intermediates that return to home country
+
+Only the third component of DVA exports by a firm comprises forward participation (DVAX or indirect domestic value-added). Hence, we have the following formula for forward participation where Where $M_{it}^{EX}$ is the $i$th firm’s intermediate exports: 
+$$
+FP_{it} = \frac{(M_{it}^{EX} \cdot \frac{VA_{it}}{TS_{it}})}{EX_{it}} = \frac{M_{it}^{EX_{it}}}{EX_{it}} \cdot \frac{VA_{it}}{TS_{it}} \tag{4.1.8}
+$$
+Since there is no inter-firm input/output tables, studies in this domain combine firm financials with customs data (Kee & Tang, 2016; Manova & Yu, 2016; Stemberger & Kejžar, 2025). Stemberger and Kejžar (2025) further map the HS codes of the exported commodities to UNSD's Broad Economic Categories (BEC) which categorizes commodities into primary, intermediate, consumer and capital products to exactly calculate the value of firm-level intermediate exports. Since we lack such a dataset, firm intermediate export share is proxied by the *industry* intermediate export share as calculated from the OECD Inter-Country Input-Output (ICIO) tables (OECD, 2024a) and mapped to NIC codes using official OECD-ISIC concordance tables (Ministry of Statistics and Programme Implementation, n.d.; OECD, 2024b). This may systematically overestimate forward participation, but since we interpret GVC position in *relative* rather than absolute terms, sufficient cross-sectional variation in the ratio $\frac{VA_{i}}{TS_{i}}$ should ensure robustness of our results.
+
+Since OECD ICIO Tables do not report intermediate export shares consistently across all industries and years, we adopt a concordance strategy based on OECD’s sectoral aggregation. Industries with similar production technologies are grouped (e.g. NIC/ISIC 10–12, 13–15, 17–18, 302–309 and 31–33), and a common intermediate export share is assigned within each group. This allows us to construct a consistent measure of forward GVC participation over time without arbitrarily dropping entire industries. The detailed industry mapping is given in the Appendix (Table 14).
+
+Finally, in the spirit of Koopman et al. (2010), we define the GVC position of the $i$th firm as follows: 
+$$
+GVC_{it} = \ln (1+FP_{it}) - \ln (1+BP_{it}) \tag{4.1.9}
+$$ 
+Since our GVC position variable is an index rather than an absolute measure, we interpret GVC position in relative terms rather than absolute and in terms of "functional upgrading" described by Humphrey and Schmitz (2002). This means our measure captures change in value-added due to the firm acquiring new functions (or abandoning existing ones) and increasing the overall skill content of its activities.
+
+### 4.2.2 Productivity
+
+Total factor productivity (TFP) is estimated using a production function approach where firm output is modelled as a function of observable inputs and an unobserved productivity term. Specifically, we use the approach given by Levinsohn and Petrin (2003) who proxy the productivity term using intermediate inputs like raw materials or energy consumption.
+
+This method is widely used in trade research at the firm level (Manghnani et al., 2021; Manova & Yu, 2016; Reddy & Sasidharan, 2021). The method relies on extracting the residual term from the estimated Cobb-Douglas production function given below: 
+$$
+Y_{it} = A_{it} K_{it}^\alpha L_{it}^\beta \tag{4.2.1}
+$$ 
+where $Y_{it}$ denotes output, $K_{it}$ denotes capital employed, $L_{it}$ denotes labour employed, and $A_{it}$ is the productivity (TFP). In logarithmic terms, we have: 
+$$
+\ln Y_{it} = \alpha \ln K_{it} + \beta \ln L_{it} + \omega_{it} + \epsilon_{it} \tag{4.2.2}
+$$ 
+where $\omega_{it}$ denotes the $i$th firm's productivity at time $t$ and $\epsilon_{it}$ is the idiosyncratic error term. Firm productivity is then obtained as a residual from the estimated production function, capturing firm-level efficiency after accounting for observable inputs: $$
+\widehat{\omega}_{it} = \ln Y_{it} - \widehat{\alpha} \ln K_{it} - \widehat{\beta} \ln L_{it} \tag{5.3}
+$$ The related data is obtained from the CMIE Prowess dataset, including data on revenue/income, net fixed assets, wage bill, energy and water consumption, and raw material used. We then estimate the production function and residual productivity to construct our variable of interest.
+
+### 4.2.3 Credit Constraints
+
+To assess the impact of credit constraints on their position within the value chain, we construct two measures ff firm financial health: access to working capital (liquidity) and firm debt burden (leverage) scaled by assets (Manova & Yu, 2016; Reddy & Sasidharan, 2021). Thus, we have: 
+$$
+liquidity_{it} = \frac{\text{current assets - current liabilities}}{\text{total assets}} = \frac{CA_{it}-CL_{it}}{TA_{it}} \tag{4.3.1}
+$$ 
+$$
+leverage_{it} = \frac{\text{short-term borrowing + long-term borrowing}}{\text{total assets}} = \frac{debt_{it}}{TA_{it}} \tag{4.3.2}
+$$ 
+Higher liquidity should theoretically ease constraints, allowing upgrading given firm productivity; higher leverage, on the other hand, should impede upgrading conditional on firm productivity (2.6). Again, the related data on firm financials is obtained from CMIE Prowess. To address endogeneity, we lag the financial variables by one period following standard practice in the literature.
+
+### 4.2.4 Firm Capabilities
+
+To estimate the impact of firm capabilities, specifically their innovative and marketing capacities, we construct measures of R&D intensity and advertising intensity following Linbing et al. (2023) also use marketing/advertisement expenditure scaled by total sales. While it is standard in the literature to measure innovation using patent information (Choi et al., 2019; Thakur & Sharma, 2025), we use R&D intensity instead due to lack of such data at the firm level. This approach "normalizes" both our capability variables unlike a log transformation which may introduce size bias (Arneja & Sharma, 2024). Finally, our measure for innovation includes "CWIP & intangibles under development" as a component of innovation as it is directly linked to the creation of scarce intangible assets. Hence, we have: 
+\begin{align}
+innovation_{it} = \frac{\text{R\&D expenditure + CWIP \& intangibles (under dev.)}}{\text{total sales}} = \frac{R\&D_{it}}{TS_{it}} \tag{4.4.1}
+\end{align} \begin{align}
+advert_{it} = \frac{\text{advertising \& marketing expenditures}}{\text{total sales}} = \frac{advertising_{it}}{TS_{it}} \tag{4.4.2}
+\end{align} 
+Finally, as an additional channel, we construct a measure for ICT usage by taking the ratio of IT & communications expenditure to total sales. This ensures that firm-level heterogeneity in size is accounted for. Thus, we have:
+\begin{align}
+ICT_{it} = \frac{\text{IT \& communication expenditure}}{\text{total sales}} = \frac{ICT_{it}}{TS_{it}} \tag{4.4.3}
+\end{align}
+All related data is taken from CMIE Prowess. Variables are lagged by one period to address endogeneity concerns.
+
+### 4.2.5 Control Variables
+
+We also employ standard control variables in the literature including firm size (defined as log of total assets), age of the firm and business group affiliation. Business group affiliation is a categorical variable taking values 1 to 4, where 0 representing standalone private Indian firms is taken as the baseline. The rest are defined as follows:
+
+- business_group1 represents standalone private foreign firms;
+- business_group2 represents firms that are affiliated to some business group (Indian or foreign parent group);
+- business_group3 represents pure government-owned (central or state) enterprises;
+- business_group4 represents joint state–private ownership.
+
+```{r tab-var-desc}
+
+# we use kbl for Latex output
+kbl(var_defn_table, 
+    caption = 'Variable Definitions and Mathematical Construction',
+    booktabs = TRUE, 
+    escape = FALSE,
+    linesep = '\\addlinespace[10pt]'  # add gap between lines
+) %>%
+  kable_styling(latex_options = 'HOLD_position') %>% 
+  footnote(general = 'Note: Firm intermediate export share is proxied using industry-level data from OECD.',
+           general_title = '',       # prevent 'Note' from displaying
+           threeparttable = TRUE)
+
+```
+
+## 4.3 Empirical Strategy
+
+Following Manova and Yu (2016), we employ panel fixed effects models with three different levels of fixed effect controls to test our research hypotheses. Specifically, we employ industry & year FE, industry-year FE and firm FE to account for various levels of heterogeneity and ensure robustness of our results. Thus, we have three different specifications of the same model to test each of our research hypotheses. 
+\begin{align}
+gvc\_pos_{it} = \beta_{1} TFP_{it} + Controls_{it} + \gamma_{j} + \lambda_{t} + \epsilon_{ijt} \tag{5.1.1} \\ 
+gvc\_pos_{it} = \beta_{1} TFP_{it} + Controls_{it} + \delta_{jt} + \epsilon_{ijt} \tag{5.1.2} \\ 
+gvc\_pos_{it} = \beta_{1} TFP_{it} + Controls_{it} + \mu_{i} + \epsilon_{ijt} \tag{5.1.3}
+\end{align} 
+\begin{align}
+gvc\_pos_{it} = \beta_{1} fin_{it} + \beta_{2} TFP_{it} + \beta_{3} fin_{it} \cdot TFP_{it} + Controls_{it} + \gamma_{j} + \lambda_{t} + \epsilon_{ijt} \tag{5.2.1} \\ 
+gvc\_pos_{it} =  \beta_{1} fin_{it} + \beta_{2} TFP_{it} + \beta_{3} fin_{it} \cdot TFP_{it} + Controls_{it} + \delta_{jt} + \epsilon_{ijt} \tag{5.2.2} \\ 
+gvc\_pos_{it} = \ \beta_{1} fin_{it} + \beta_{2} TFP_{it} + \beta_{3} fin_{it} \cdot TFP_{it} + Controls_{it} + \mu_{i} + \epsilon_{ijt} \tag{5.2.3}
+\end{align} 
+\begin{align}
+gvc\_pos_{it} = \beta_{1} capab_{it} + \beta_{2} TFP_{it} + Controls_{it} + \gamma_{j} + \lambda_{t} + \epsilon_{ijt} \tag{5.3.1} \\ 
+gvc\_pos_{it} = \beta_{1} capab_{it} + \beta_{2} TFP_{it} + Controls_{it} + \delta_{jt} + \epsilon_{ijt} \tag{5.3.2} \\ 
+gvc\_pos_{it} = \beta_{1} capab_{it} + \beta_{2} TFP_{it} + Controls_{it} + \mu_{i} + \epsilon_{ijt} \tag{5.3.3}
+\end{align}
+Models 5.1.1 to 5.1.3 test hypothesis 1, models 5.2.1 to 5.2.3 test hypothesis 2, and models 5.3.1 to 5.3.3 test hypothesis 3. In each set, the first model is the industry & year FE specification where $\gamma_{j}$ and $\lambda_{t}$ are the industry $(j)$ and year $(t)$ fixed effects respectively. The second one in each set is the industry-year FE specification accounting for industry-specific time-varying shocks, with $\delta_{jt}$ representing the industry-year fixed effect. Finally, the third model in each set is the firm FE specification where $\mu_{it}$ represents the firm $(i)$ fixed effect. The term $\epsilon_{ijt}$ is the idiosyncratic error term.
+
+\newpage
+
+# Chapter 5: Results
+
+\noindent\hrulefill
+
+## 5.1 Descriptive Statistics
+
+```{r tab-summary-stats}
+datasummary_df(
+  summ_table,
+  title = 'Summary Statistics',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')  # strong hold
+```
+
+```{r tab-summary-stats-win}
+datasummary_df(
+  summ_table_w,
+  title = 'Summary Statistics (Post-Winsorization)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')  # strong hold
+```
+
+Tables 2 and 3 present the summary statistics of the key variables used in our analysis. Table 2 reports the baseline statistics, while Table 3 reports the statistics after winsorizing the credit variables (liquidity and leverage) at the 1st and 99th percentiles to mitigate the influence of extreme outliers.
+
+The GVC position index ($gvc\_position$) is unbounded in theory, but in practice is constrained by the underlying distribution of forward and backward participation. In our data, the measure is skewed toward negative values, reflecting the predominance of downstream, import-intensive firms. It has a mean close to zero (0.04) with a relatively small standard deviation (0.20), indicating that most firms are clustered around the middle of the value chain rather than at either extreme end of the production chain.
+
+Among the explanatory variables, firm productivity ($lag\_tfp$) shows substantial variation with a range of -9.51 to 1.82, reflecting heterogeneity in firm efficiency. Firm size and age also display considerable variation, reflecting a mix of young and older, established firms.
+
+The credit variables in Table 2 show extreme ranges and very high standard deviations: liquidity ($lag\_liq$) has a standard deviation of 33.33 while for leverage ($lag\_lev$) it is 11.31 with maximum values far exceeding typical firm-level values, suggesting the presence of significant outliers. To address this issue, both variables are winsorized at the 1st and 99th percentiles in Table 3. Post-winsorization, the distributions become much more stable: the standard deviations of both liquidity and leverage decline (from 33.33 to 0.48 for liquidity; from 11.31 to 0.31 for leverage), with corresponding reductions in their minimum and maximum values respectively. We use these winsorized variables in our regression models.
+
+Finally, capability-related variables such as advertising intensity ($lag\_adv$) and innovation ($lag\_innov$) are concentrated at relatively low values with low standard deviation, indicating that most firms engage only minimally in these activities. Since investments in branding and innovation are concentrated among only a small subset of firms, it may imply that only a few firms possess the market-facing and knowledge-based capabilities required to move toward higher value-added segments of the value chain. In contrast, ICT intensity ($lag_ict$) exhibits a relatively higher mean and smaller dispersion, suggesting more consistent engagement across firms. This indicates that basic digital or ICT-related expenditures are more widespread compared to innovation and advertising.
+
+```{r fig-corrplot, out.width='100%', fig.cap="Correlation Matrix", fig.pos='H'}
+knitr::include_graphics('F:/r/thesis-gvc-position/output/images/corrplot.png')
+```
+
+Figure 1 shows the correlation matrix of our key variables and indicates that pairwise correlations among them are generally low, suggesting the absence of strong linear relationships. Most coefficients are close to zero, with the exception of a moderate negative correlation between leverage and liquidity. The relatively weak correlations imply that multicollinearity is unlikely to be a major concern in the regression analysis. At the same time, the low correlation between capability variables (innovation, advertising and ICT) and GVC position suggests that their effects may not operate in isolation but rather through more complex, interactive channels. Further, these relationships may be obscured by significant firm-level heterogeneity, which cannot be captured in simple pairwise correlations and instead necessitates a fixed-effects framework. This motivates the inclusion of interaction terms and firm-level controls in the empirical specification.
+
+```{r fig-firm-count, out.width='100%', fig.cap="Distribution of Firms Across Industries", fig.pos='H'}
+knitr::include_graphics('F:/r/thesis-gvc-position/output/images/firm-count-distribution.png')
+```
+
+The distribution of firms across industries in the sample is highly uneven, with a few sectors accounting for a disproportionately large share of observations (Figure 2). ISIC code 32 (other manufacturing, including jewellery, musical instruments, medical instruments etc) has the largest representation with 2,187 firms, followed by chemicals (20: 1,809), electrical equipment (27: 1,506) and textiles (13: 1,157). Other relatively well-represented sectors include food products (10: 1,143), machinery (28: 954) and motor vehicles (29: 934). Since the measure of forward GVC participation in our research relies on industry-level proxies, we disaggregate industry 24 (basic metals) and industry 30 (transport equipment) into their constituent sub-sectors following the OECD classification. Some of these sub-sectors notably have the least number of firms: 303 (8 firms), 301 (14 firms), 2432 (24 firms) and 302 (40 firms), alongside sector 31 (furniture, with 24 firms). Since the sample remains concentrated in a few key manufacturing sectors, our empirical estimation strategy must address this industry-level heterogeneity.
+
+## 5.2 The Impact of Productivity on GVC Upgrading
+
+Table 4 estimates our first hypothesis relating firm productivity to GVC positioning under the three alternate specifications: (1) industry and year fixed effects, (2) industry-year fixed effects, and (3) firm fixed effects. Total factor productivity $(lag\_tfp)$ emerges as the most robust determinant of GVC position, with a positive and highly significant coefficient across all three models. Thus, both cross-sectional and within-firm improvements in productivity can improve GVC positioning, confirming earlier studies that found productivity to be a key driver of moving up within GVCs. In fact, a 1% increase in (lagged) TFP raises relative firm position within the value chain by 0.11 to 0.21 units, either by reducing import dependence (holding forward contribution constant), or increasing value-added of intermediate exports (holding import intensity constant), or both. 
+
+```{r tab-productivity, results='asis'}
+
+models_prod <- list(
+  'Industry & Year FE' = prod1,
+  'Industry-Year FE'   = prod2,
+  'Firm FE'            = prod3
+)
+
+modelsummary(models_prod,
+             output = 'kableExtra',
+             title = 'Panel Regression for Firm Productivity',
+             stars = TRUE,
+             fmt = 3,                     # decimal rounding
+             add_rows = fe_rows,          # fixed effects
+             gof_map = fitstats) %>%      # fitstats
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+Firm age is statistically significant and positively associated with GVC position, implying that older established firms are positioned farther up the production chain than newer firms. They also tend to rely less on imported inputs and export more value in the form of more sophisticated intermediate. 
+
+The most interesting result is the coefficient on size $(size\_new)$, which is negative. Generally, we expect larger firms to be positioned higher in the value chain since they have the capacity for R&D and brand-building to improve product quality and differentiate their product from competitors. But our results imply that larger firms (here, firms with a larger asset base) may be more assembly-oriented with higher import dependence instead of high value-added exporters. Reddy and Sasidharan (2021) find that larger firms tend to *participate* more in GVCs, but out findings suggest that such firms are more likely to operate in low value-added segments of the production chain, becoming trapped in the "captive effect" that Thakur and Sharma (2025) warn about.
+
+Within $R^2$ is low across all specifications. A comparatively higher Adjusted $R^2$ reveals that the models mainly capture between-firm differences as opposed to within-firm variations, indicating the low explanatory power of our productivity model.
+
+Overall, however, higher productivity is associated with better GVC positioning. Firms that improve their productivity are able to move further up in the value chain over time (i.e. upgrade) as shown by the statistically significant coefficient on $lag\_tfp$ in the firm FE specification. TFP has a robust and consistent effect across all specifications, though the magnitude is modest, reflecting the gradual nature of upgrading within GVCs.
+
+## 5.3 The Impact of Credit Constraints on GVC Upgrading
+
+### 5.3.1 The Liquidity Mechanism
+
+Table 5 estimates our second hypothesis relating firm productivity to GVC positioning under the three alternate specifications: (1) industry and year fixed effects, (2) industry-year fixed effects, and (3) firm fixed effects. Access to working capital $(lag\_liq\_w)$ does not emerge as a statistically significant determinant of GVC position across any of the specifications. This suggests that short-term liquidity constraints do not play a decisive role in shaping a firm’s position within the value chain *in isolation*. In other words, simply having greater access to working capital does not necessarily enable firms to reduce import dependence or increase the domestic value-added content of their exports. This contrasts with the findings of Manova and Yu (2016) who found liquidity to be a significant driver of upgrading for Chinese firms, though they do not include an interaction term in their model.
+
+The lack of significance across all three specifications also indicates that neither cross-sectional differences and within-firm changes in liquidity are associated with GVC upgrading. While access to finance is often viewed as a critical enabler of firm performance, these results imply that liquidity primarily supports routine operational activities rather than strategic upgrading into higher value-added segments of production. This is consistent with the idea that financial resources alone are insufficient without complementary firm capabilities, such as productivity, innovation or market power.
+
+```{r tab-credit-liquidity, results='asis'}
+
+models_liq <- list(
+  'Industry & Year FE' = liq1,
+  'Industry-Year FE'   = liq2,
+  'Firm FE'            = liq3
+)
+
+modelsummary(models_liq,
+             output = 'kableExtra',
+             title = 'Panel Regression for Working Capital Access',
+             stars = TRUE,
+             fmt = 3,                     # decimal rounding
+             add_rows = fe_rows,          # fixed effects
+             gof_map = fitstats) %>%      # fitstats
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+Moreover, the coefficient on liquidity declines in magnitude when moving to the firm fixed effects specification, reinforcing the interpretation that earlier variation is likely driven by time-invariant firm characteristics such as managerial quality, established banking relationships or network advantages rather than a causal effect of liquidity itself. Even though Reddy and Sasidharan (2021) find working capital access to be a significant driver of GVC *participation* of Indian firms, our results suggest that the role of liquidity may end there.
+
+The interaction term between liquidity and productivity $(lag\_liq\_w \cdot lag\_tfp)$ provides limited evidence of complementarity between financial access and firm capabilities. In the first specification, the coefficient is positive and weakly significant, suggesting that firms with both higher productivity and better working capital access may be better able to upgrade. However, this effect does not persist in the firm fixed effects specification, where the interaction term becomes insignificant. This indicates that the observed complementarity is not robust to controlling for unobserved, time-invariant firm characteristics and likely reflects structural differences across firms—such as managerial quality, established banking relationships or network advantages rather than a causal mechanism where access to working capital enhances the impact of productivity on GVC positioning.
+
+Within $R^2$ is low across all specifications (~4%; drops to 0.9% in the firm FE specification). A comparatively higher Adjusted $R^2$ reveals that the model mainly captures between-firm differences rather than within-firm variation, indicating the limited explanatory power of working capital access in driving changes in GVC positioning.
+
+Figure 3 estimates industry-specific estimates of liquidity on GVC position, revealing substantial heterogeneity in the relation. While certain sectors such as printing (ISIC 18), non-metallic minerals (23) and fabricated metals (2431, 2432) exhibit a strong and positive association, several core manufacturing industries including machinery (28), automobiles (29), furniture (31) and other manufacturing (32) show a negative and statistically significant relationship. Wide confidence intervals observed in smaller industries (e.g. ISIC 301, 302) indicating low precision due to limited firm representation. These results highlight that the role of working capital in facilitating upgrading is highly context-specific and mediated by industry structure, rather than being universally beneficial.
+
+```{r fig-indspecific-liq, out.width='100%', fig.cap="Industry-Specific Effect of Liquidity on GVC position", fig.pos='H'}
+knitr::include_graphics('F:/r/thesis-gvc-position/output/images/industry-beta-liq.png')
+```
+
+Overall, the findings suggest that while working capital may be necessary for sustained GVC participation (Reddy & Sasidharan, 2021), it is not a binding constraint for moving up the value chain. Instead, upgrading appears to depend more critically on deeper structural capabilities, with liquidity playing at most a supportive but not transformative role. This is further reinforced by our industry-specific results, which reveal substantial heterogeneity in the relation between liquidity and GVC position. While liquidity facilitates upgrading in certain sectors, in others it is either insignificant or even negatively associated with GVC position, suggesting that additional financial resources may be directed toward expanding existing production rather than functional upgrading.
+
+### 5.3.2 The Leverage Mechanism
+
+Table 6 again estimates our second hypothesis relating firm productivity to GVC positioning under the three alternate specifications: (1) industry and year fixed effects, (2) industry-year fixed effects, and (3) firm fixed effects. Firm debt burden $(lag\_lev\_w)$ has a negative and statistically significant association with GVC position, though this effect disappears once firm fixed effects are introduced. In particular, the coefficients in the first two models suggest that a 1% increase in lagged leverage reduces a firm’s GVC position by ~0.13 units, indicating that more indebted firms are located lower in the value chain. This may reflect greater reliance on imported inputs or a lower capacity to generate domestic value-added through exports, supporting Manova and Yu (2016) who similarly find leverage to be a statistically significant constraint on GVC upgrading, though their estimated effect is smaller (0.002-0.005). However, importantly, the coefficient becomes insignificant in the firm fixed effects specification implying that this relationship is largely driven by cross-sectional differences rather than within-firm changes over time.
+
+The results therefore suggest that highly leveraged firms are structurally disadvantaged in terms of GVC positioning, possibly due to financial constraints that limit their ability to invest in upgrading activities such as innovation, quality improvement or branding. At the same time, the absence of a significant within-firm effect indicates that fluctuations in debt levels do not impede within-firm upgrading.
+
+The interaction term between leverage and productivity $(lag\_lev\_w \cdot lag\_tfp)$ is negative and significant in the first two specifications, suggesting that higher debt burdens dampen the positive effect of productivity on GVC positioning. In other words, even productive firms may be unable to translate efficiency gains into upgrading when constrained by high leverage. However, similar to the main effect, this interaction becomes insignificant under firm fixed effects, i.e., it is not robust to unobserved firm heterogeneity.
+
+Within $R^2$ is low across all specifications (~4%; drops to 1.5% in the firm FE specification). A comparatively higher Adjusted $R^2$ suggests that the model primarily captures cross-sectional differences across firms rather than within-firm variation, indicating the limited role firm leverage in explaining GVC upgrading over time.
+
+```{r tab-credit-leverage, results='asis'}
+
+models_lev <- list(
+  'Industry & Year FE' = lev1,
+  'Industry-Year FE'   = lev2,
+  'Firm FE'            = lev3
+)
+
+modelsummary(models_lev,
+             output = 'kableExtra',
+             title = 'Panel Regression for Firm Debt Burden',
+             stars = TRUE,
+             fmt = 3,                     # decimal rounding
+             add_rows = fe_rows,          # fixed effects
+             gof_map = fitstats) %>%      # fitstats
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+The industry-specific estimates for leverage reveal a more consistent pattern compared to liquidity (Figure 4), with a majority of core manufacturing sectors exhibiting a negative and statistically significant relationship between leverage and GVC position, confirming our previous regression results. Industries such as food processing (10), petroleum products (19), metals (27), machinery (28), automobiles (29) and other manufacturing (32) show that higher debt burdens are associated with a decline in GVC position. This suggests that external financing, unlike internal liquidity, may constrain firms’ ability to upgrade. While a few sectors such as printing (18), non-metallic minerals (23) and certain metal sub-sectors (2431, 2432) display positive effects, these are exceptions and in some cases accompanied by wide confidence intervals, indicating lower precision. Thus, our results highlight that leverage may reinforce firms’ engagement in lower value-added activities rather than facilitating movement toward higher value-added segments, particularly in scale-intensive manufacturing.
+
+```{r fig-indspecific-lev, out.width='100%', fig.cap="Industry-Specific Effect of Leverage on GVC position", fig.pos='H'}
+knitr::include_graphics('F:/r/thesis-gvc-position/output/images/industry-beta-lev.png')
+```
+
+Overall, the findings point to a nuanced role of financial structure in shaping GVC outcomes. While higher leverage is associated with poorer GVC positioning in cross-sectional estimates, its within-firm effect suggests that debt does not uniformly impede upgrading over time. Instead, the impact of leverage varies across industries. In several core manufacturing sectors such as machinery, automobiles and machinery, higher leverage is associated with a decline in GVC position. In contrast, certain industries exhibit a positive relationship, suggesting that external financing may facilitate movement into higher value-added functions where capital requirements are substantial. At the same time, wide confidence intervals in smaller industries point to limited precision in our estimates. Overall, conditional on firm productivity, higher leverage is associated with lower GVC positioning in the cross-section, but it does not necessarily drive within-firm upgrading, and the effect varies by industry-specific contexts.
+
+## 5.4 The Impact of Firm-Capabilities on GVC Upgrading
+
+Firm capabilities, proxied by advertising intensity $(lag\_adv)$ and innovation $(lag\_innov)$, emerge as important determinants of GVC position, though their robustness and persistence vary (Table 7). The coefficient on advertising is strongly positive and significant across all three specifications, including under firm FE. In fact, a 1% increase in advertising is associated with a 0.19 unit rise in GVC position. This suggests that both cross-sectional differences and within-firm increases in branding, marketing and distribution enable firms to move toward higher value-added segments of the value chain. Higher advertising intensity likely reflects stronger brand-building and market-facing capabilities, which allow firms to differentiate their products, command higher margins (market power) and reduce dependence on low-value assembly activities. This is consistent with Arneja and Sharma (2024) who similarly find advertising investments to enable higher value capture, although our coefficients are notably larger.
+
+In contrast, innovation $(lag\_innov)$ shows a positive and significant effect only in the first two specifications, with coefficients of 0.125 and 0.116 in models (1) and (2) respectively. However, this effect becomes insignificant in the firm fixed effects specification. This indicates that while more innovative firms tend to be positioned higher in the value chain (cross-sectional difference), within-firm increases in innovation do not translate into upgrading over time. One possible explanation is that the observed cross-sectional relationship may capture persistent firm characteristics like technological capability or R&D orientation rather than a direct causal effect. Secondly, R&D intensity might itself be a weak proxy for innovation. Both Choi et al. (2019) and Thakur and Sharma (2025) find a positive, statistically significant link between GVC position and innovation at the country and industry levels respectively; but they also proxy innovation using the number of patent applications.
+
+```{r tab-capabilities, results='asis'}
+
+models_capab <- list(
+  'Industry & Year FE' = capab1,
+  'Industry-Year FE'   = capab2,
+  'Firm FE'            = capab3
+)
+
+modelsummary(models_capab,
+             output = 'kableExtra',
+             title = 'Panel Regression for Firm Capabilities',
+             stars = TRUE,
+             fmt = 3,                     # decimal rounding
+             add_rows = fe_rows,          # fixed effects
+             gof_map = fitstats) %>%      # fitstats
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+Within $R^2$ is low across all specifications (~12-13%; plunges to 2% in the firm FE specification), though relatively higher than in the financial models. A comparatively higher Adjusted $R^2$ (34-39%; rises to 85% in the final specification) indicates that the model still largely captures between-firm differences rather than within-firm variation, suggesting that firm capabilities are more important in explaining cross-sectional differences than short-run changes in GVC positioning.
+
+These results highlight an important distinction between different types of firm capabilities. While both advertising and innovation are associated with improved GVC positioning, only advertising demonstrates a robust within-firm effect, suggesting that market-facing capabilities play a more consistent role in enabling upgrading within GVCs. Innovation, on the other hand, appears to explain structural differences in the cross-section rather than a driver of movement along the value chain.
+
+### 5.4.1. The Role of Information & Communication Technology
+
+To examine the role of digital technologies in an increasingly interconnected global economy, we estimate two firm fixed-effects models: one focusing on advertising and the other on innovation. In each specification, we interact the respective capability variable with ICT intensity to assess whether digital capabilities complement these firm-level investments in driving GVC upgrading.
+
+```{r tab-ICT-adv, results='asis'}
+
+modelsummary(ict_adv,
+             output = 'kableExtra',
+             title = 'Panel Regression for Advertising × ICT',
+             col.names = NULL,
+             stars = TRUE,
+             fmt = 3,                     # decimal rounding
+             gof_map = fitstats) %>%      # fitstats
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+Table 8 shows the how advertising interacts with ICT usage. The interaction between advertising intensity ($lag\_advert$) and ICT ($lag\_ict$) has a positive and statistically significant effect on GVC position, highlighting a strong complementarity between market-facing and digital capabilities. While advertising intensity alone shows a weak negative association with GVC upgrading, and ICT intensity by itself remains insignificant, their combined effect is positive, suggesting that digital capability enhances the effectiveness of advertising in enabling firms to move toward higher value-added segments. This supports Oh and Hwang (2025) in their view that digital capabilities can act as "VRIN" resources, providing sustained comparative advantages and enable upgrading. Investments in branding and market expansion translate into upgrading only when supported by adequate ICT infrastructure, which facilitates market access, coordination and customer engagement. This is in line with Linbing et al. (2023)'s findings that the firm’s ability to internalize and innovate is what drives value capture, rather than simply participating in such functions.
+
+```{r tab-ICT-innov, results='asis'}
+
+modelsummary(ict_innov,
+             output = 'kableExtra',
+             title = 'Panel Regression for Innovation × ICT',
+             col.names = NULL,
+             stars = TRUE,
+             fmt = 3,                     # decimal rounding
+             gof_map = fitstats) %>%      # fitstats
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+In contrast to the advertising, neither innovation nor its interaction with ICT exhibits a statistically significant effect on GVC position (Table 9). The coefficients on innovation ($lag\_innov$), ICT intensity ($lag\_ict$) and their interaction are all insignificant, suggesting that investments in innovation do not translate into observable upgrading within the value chain (at least in the short run). This may reflect the long gestation period of R&D activities, where gains in product sophistication materialize only over a longer horizon. Additionally, the relatively smaller sample size and limited within-firm variation in innovation expenditure may further reduce the ability to detect significant effects in a fixed-effects framework. Our results do not find strong support for Oh and Hwang (2025)'s claims on digital capabilities enhancing innovation and promoting functional upgrading, although we do find support for the advertising channel.
+
+The results point to a conditional role of digital capability in driving GVC upgrading: ICT intensity on its own does not have a significant effect, but plays a complementary role when combined with market-facing capabilities such as advertising. In contrast, no such complementarity is observed with innovation, suggesting that the interaction between digital capability and R&D is less immediate and may operate over longer time horizons. Overall, these findings indicate that digital technologies are not independently sufficient for upgrading, but act as an enabling infrastructure that amplifies specific firm capabilities, particularly those linked to market access.
+
+## 5.5 Diagnostics Tests
+
+### 5.5.1 Hausman Test
+
+```{r tab-hausman}
+
+datasummary_df(
+  hausman_table,
+  title = 'Results of Hausman Test',
+  output = 'kableExtra',
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+The Hausman test results (Table 10) indicate that while the productivity (baseline) specification does not show significant differences between fixed and random effects, the inclusion of financial and capability-related variables leads to systematic rejection of the random effects model. This suggests that key explanatory variables such as liquidity, leverage and their interaction with productivity, as well as advertising, innovation and their interactions with ICT are correlated with unobserved firm-level heterogeneity. Thus, fixed effects estimation is more appropriate for most specifications, except the innovation–ICT interaction model, where the evidence against random effects is weaker.
+
+### 5.5.2 Breusch-Pagan Test
+
+```{r tab-bp}
+
+datasummary_df(
+  bp_table,
+  title = 'Results of Breusch-Pagan Test for Heteroscedasticity',
+  output = 'kableExtra',
+  escape = FALSE
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+Breusch–Pagan tests for heteroskedasticity (Table 11) strongly reject the null of constant error variance across all model specifications, indicating the presence of heteroskedasticity in the panel data. This is consistent with the underlying heterogeneity in firm characteristics such as size, industry structure and degree of global integration which can lead to high variation in GVC outcomes. However, all regressions employ two-way clustered standard errors at the firm and year level, which are robust to heteroskedasticity as well as serial correlation, ensuring robust statistical inference.
+
+### 5.5.3 Wooldridge Autocorrelation Test
+
+```{r tab-serialcorr}
+
+datasummary_df(
+  serialcorr_table,
+  title = 'Results of Wooldridge Test for Autocorrelation',
+  output = 'kableExtra',
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+Wooldridge tests for serial correlation (Table 12) indicate that the productivity specification and the capability model (advertising and innovation) suffer from significant first-order serial correlation, suggesting persistence in unobserved firm-level shocks to GVC position over time. In contrast, models incorporating financial variables (liquidity and leverage) and digital capability interactions (advertising–ICT) do not exhibit evidence of serial correlation. The innovation–ICT interaction model shows weak evidence of serial correlation at the 10% level. To account for any remaining concerns, all regressions employ two-way clustered standard errors at the firm and year level to ensure robustness.
+
+### 5.5.4 VIF Test
+
+```{r tab-vif}
+
+datasummary_df(
+  vif_table,
+  title = 'Results of VIF Test for Multicollinearity',
+  output = 'kableExtra',
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+Variance Inflation Factor (VIF) diagnostics (Table 13) indicate no evidence of multicollinearity across model specifications. The adjusted GVIF values for all variables remain well below conventional thresholds, with the maximum value not exceeding 2.4 even in models including interaction terms. Slightly higher values are observed for interaction variables, but this is expected due to their construction. Overall, the results suggest that the estimated coefficients are stable and not driven by multicollinearity among regressors.
+
+\newpage
+
+# Chapter 6: Summary & Conclusion
+
+\noindent\hrulefill
+
+## 6.1 Summary
+
+This study examined the firm-level determinants of upgrading within global value chains (GVCs) in Indian manufacturing using a novel firm-level measure of GVC position. Integrating insights from trade theory, GVC governance and the resource-based view, the analysis focused on the roles of productivity, financial constraints and firm capabilities.
+
+The results indicate that productivity is the most robust and consistent driver of upgrading. More productive firms are able to move toward higher value-added segments of the value chain, and this effect holds both across firms and within firms over time. In contrast, the role of financial constraints is more nuanced and highly context-dependent. While leverage is found to be significant, liquidity does not exhibit a statistically significant effect. Moreover, firm fixed effects suggest that leverage primarily explains cross-sectional variation rather than within-firm upgrading, indicating that overall, financial constraints may not be associated with GVC upgrading outcomes of firms. However, both leverage and liquidity display substantial industry-level heterogeneity, suggesting that the impact of financial constraints is sector-specific and mediated by differences in production structure, capital intensity and GVC organization across industries.
+
+Firm capabilities yield mixed results. Advertising and marketing-related expenditures emerge as significant drivers of upgrading, highlighting the importance of downstream, market-facing capabilities. However, innovation does not show a statistically significant effect, either independently or in interaction with other variables. The role of ICT is also complex: while ICT by itself is not significant, its interaction with advertising is positive and significant, suggesting that digital capabilities enhance the effectiveness of market-facing investments. At the same time, the standalone effect of advertising weakens in the presence of ICT interactions, indicating complementarity between the two.
+
+Overall, the findings suggest that upgrading within GVCs is primarily driven by productivity and selective firm capabilities, with financial constraints and digital factors playing more context-dependent and heterogeneous roles.
+
+## 6.2 Key Findings
+
+- Productivity is the dominant driver of upgrading: It significantly explains both cross-sectional differences and within-firm movement along the value chain.
+- Liquidity is not a binding constraint on average: Working capital does not show a statistically significant effect in the baseline results.
+- Leverage matters, but primarily across firms: It explains differences in GVC position across firms but does not significantly drive within-firm upgrading when firm fixed effects are considered.
+- Impact of financial constraints are highly sector-specific: The effects of both leverage and liquidity vary significantly across industries, indicating that their impact depends on sectoral characteristics such as capital intensity and GVC structure.
+- Advertising drives upgrading; innovation does not: Market-facing capabilities are significant, while R&D expenditures do not show measurable effects.
+- ICT has no standalone effect but acts as a complement: The interaction between ICT and advertising is positive and significant, even though ICT alone is insignificant.
+
+## 6.3 Policy Recommendations
+
+The empirical results collectively suggest that upgrading within global value chains is driven less by short-term financial conditions and more by deeper, capability-based factors. While productivity consistently emerges as a robust determinant of GVC positioning, financial variables such as liquidity and leverage play, at best, a limited and context-specific role. In contrast, firm-level capabilities — especially those related to marketing and digital adoption — show stronger and more nuanced effects. Further, the significance of their interaction terms highlights that capabilities do not operate in isolation; rather, it is the complementarity between digital technology and market-facing capability that enables firms to move toward higher value-added segments. At the same time, the weak and inconsistent results for innovation may reflect measurement limitations, but also point to structural constraints in translating R&D spending into functional upgrading in developing countries. Overall, the findings reinforce the idea that GVC upgrading is a gradual, capability-intensive process shaped by firm heterogeneity and industry structure.
+
+From a policy perspective, this implies that strategies focused solely on expanding GVC participation or easing financial constraints are unlikely to drive sustained upgrading. Instead, policy should prioritize the development of firm capabilities, particularly in areas such as digital adoption, branding and market access. This includes targeted support for ICT diffusion, incentives for marketing and design capabilities and institutional mechanisms that help firms integrate into higher-value segments (e.g. export promotion agencies, cluster-based support systems). Additionally, given the heterogeneity observed across industries, a "one-size-fits-all" approach is unlikely to be effective; sector-specific policies that account for differences in production structure and technological intensity are crucial. Finally, improving the quality and effectiveness of innovation systems — ensuring that R&D leads to commercially viability — remains an important long-term objective. Taken together, our findings suggest that moving up the value chain requires not just participation, but the deliberate accumulation of complementary capabilities supported by an enabling policy environment.
+
+## 6.4 Scope for Future Research
+
+This study opens up several avenues for further research, particularly in refining the understanding of how firm capabilities interact with the structure of global value chains (GVCs).
+
+A key extension would be to explicitly account for the upstream/downstream positioning of industries using the framework developed by Antras et al. (2012). Categorizing industries based on their upstream or downstream orientation would allow for a more nuanced test of capability-specific effects. In particular, future research could examine whether R&D and innovation (upstream capabilities) are more relevant for upgrading upstream, and marketing and branding (downstream capabilities) for downstream upgrading. This would help clarify the inconclusive findings on innovation in the present study and provide a more structurally grounded interpretation of capability-driven upgrading.
+
+More broadly, the results point to the need for incorporating sector-specific production structures into empirical analyses of GVC upgrading. Future work could explore richer industry classifications based on technological intensity or governance structures to better understand the heterogeneity observed in the effects of financial constraints and firm capabilities.
+
+Another important extension would be to improve the measurement of firm-level GVC participation. While this study relies partly on industry-level proxies for forward participation due to data limitations, future research could utilize more granular datasets, such as firm-level trade (customs) data, to construct more precise firm-level measures of value chain positioning.
+
+Finally, future research could examine the dynamic aspects of upgrading. The current analysis focuses on contemporaneous relationships, but upgrading is inherently a gradual process involving learning and capability accumulation over time. Incorporating dynamic models could shed light on the persistence of upgrading strategies across firms.
+
+\newpage
+
+# References
+
+- Antras, P., & Chor, D. (2013). Organizing the Global Value Chain. *Econometrica, 81*(6), 2127–2204.
+- Antras, P., Chor, D., Fally, T., & Hillberry, R. (2012). Measuring the Upstreamness of Production and Trade Flows. *American Economic Review, 102*(3).
+- Arneja, N., & Sharma, C. (2024). Dissecting performance gains from export-induced marketing and technological investments: Revisiting learning by exporting in Indian manufacturing. *The Quarterly Review of Economics and Finance, 97*(101886), 101886.
+- Arora, K. (2023). Developing linkages between technology-intensive exports and GVC participation: a perspective from India and G20 countries. *International Review of Applied Economics, 37*(6), 804–827.
+- Baldwin, R., & Ito, T. (2022). The smile curve: Evolving sources of value added in manufacturing. *Canadian Journal of Economics/Revue Canadienne D’économique, 54*(4), 1842–1880.
+- Barney, J. (1991). Firm Resources and Sustained Competitive Advantage. *Journal of Management, 17*(1), 99–120.
+- Berman, N., & Héricourt, J. (2010). Financial factors and the margins of trade: Evidence from cross-country firm-level data. *Journal of Development Economics, 93*(2), 206–217.
+- Braunerhjelm, P., & Thulin, P. (2008). Can countries create comparative advantages? R&D expenditures, high-tech exports and country size in 19 OECD countries, 1981–1999. *International Economic Journal, 22*(1), 95–111.
+- Cattaneo, O., Gereffi, G., Miroudot, S., & Taglioni, D. (2013). Joining, Upgrading and Being Competitive in Global Value Chains: A Strategic Framework. *World Bank Policy Research Working Paper*, 6406. The World Bank.
+- Choi, H., Kim, S., & Jung, T. (2019). The Role of Innovation in Upgrading in Global Value Chains. *Global Economic Review, 48*(3), 273–283.
+- Gereffi, G. (1999). International Trade and Industrial Upgrading in the Apparel Commodity Chain. *Journal of International Economics, 48*(1), 37–70.
+- Gereffi, G., Humphrey, J., & Sturgeon, T. (2005). The Governance of Global Value Chains. *Review of International Political Economy, 12*(1), 78–104.
+- Giuliani, E., Pietrobelli, C., & Rabellotti, R. (2005). Upgrading in Global Value Chains: Lessons from Latin American Clusters. *World Development, 33*(4), 549–573.
+- Grossman, G. M., & Rossi-Hansberg, E. (2008). Trading Tasks: A Simple Theory of Offshoring. *The American Economic Review, 98*(5), 1978–1997. 
+- Hernández-Rodríguez, E., Boschma, R., Morrison, A., & Ye, X. (2025). Functional upgrading and downgrading in global value chains: Evidence from EU regions using a relatedness/complexity framework. *Papers in Regional Science, 104*(1), 100072. 
+- Hummels, D., Ishii, J., & Yi, K.-M. (2001). The nature and growth of vertical specialization in world trade. *Journal of International Economics, 54*(1), 75–96.
+- Humphrey, J., & Schmitz, H. (2002). How does insertion in global value chains affect upgrading in industrial clusters? *Regional Studies, 36*(9), 1017–1027.
+- Ito, T., & Vézina, P.-L. (2016). Production fragmentation, upstreamness, and value added: Evidence from Factory Asia 1990–2005. *Journal of the Japanese and International Economies, 42*, 1–9.
+- Kee, H. L., & Tang, H. (2016). Domestic Value Added in Exports: Theory and Firm Evidence from China. *The American Economic Review, 106*(6), 1402–1436.
+- Koopman, R., Powers, W., Wang, Z., & Wei, S.-J. (2010). Give Credit Where Credit Is Due: Tracing Value Added in Global Production Chains. National Bureau of Economic Research (NBER).
+- Kordalska, A., & Olczyk, M. (2022). Upgrading low value-added activities in global value chains: a functional specialisation approach. *Economic Systems Research, 35*(2), 1–27.
+- Kowalski, P., Gonzalez, J. L., Ragoussis, A., & Ugarte, C. (2015). Participation of Developing Countries in Global Value Chains: Implications for Trade and Trade-Related Policies. *OECD Trade Policy Papers*, No. 179. OECD Publishing, Paris.
+- Krugman, P. (1980). Scale Economies, Product Differentiation, and the Pattern of Trade. *The American Economic Review, 70*(5), 950–959.
+- Levinsohn, J., & Petrin, A. (2000). Estimating Production Functions Using Inputs to Control for Unobservables. *Review of Economic Studies, 70*(2), 317–341.
+- Linbing, S., Tienan, W., Feiyang, G., & Liqing, T. (2022). Firms’ participation in global value chains marketing activities and performance: the roles of international experience and technological turbulence. The Journal of International Trade & Economic Development, 32(4), 553–574.
+- Manghnani, R., Meyer, B., Saez, S., & van Der Marel, E. (2021). Firm Performance, Participation in Global Value Chains and Service Inputs: Evidence from India. *Policy Research Working Paper Series*, 9814. The World Bank.
+- Manova, K. (2013). Credit Constraints, Heterogeneous Firms, and International Trade. *The Review of Economic Studies, 80*(2 (283)), 711–744.
+- Manova, K., & Yu, Z. (2016). How firms export: Processing vs. ordinary trade with financial frictions. *Journal of International Economics, 100*, 120–137.
+- Melitz, M. J. (2003). The Impact of Trade on Intra-Industry Reallocations and Aggregate Industry Productivity. *Econometrica, 71*(6), 1695–1725.
+- Minetti, R., & Zhu, S. C. (2011). Credit constraints and firm export: Microeconomic evidence from Italy. *Journal of International Economics, 83*(2), 109–125.
+- Ministry of Statistics and Programme Implementation. (n.d.). *NIC 2008 Codes & its Descriptions*.
+- Mudambi, R. (2008). Location, control and innovation in knowledge-intensive industries. *Journal of Economic Geography, 8*(5), 699–725.
+- OECD. (n.d.). *Global Value and Supply Chains*.
+- OECD. (2009). Vertical Specialisation and Global Value Chains. *STD/SES/WPTGS(2009)16*.
+- OECD. (2024a). *Inter-Country Input-Output tables: 2025 edition (regular ICIO)*.
+- OECD. (2024b). *Inter-Country Input-Output tables: 2025 edition annex*.
+- Oh, S., & Hwang, S. (2025). How does digital capability translate into export performance?: The critical mediating role of GVC upgrading. *Asia and the Global Economy, 5*(2), 100116.
+- Ponte, S., & Ewert, J. (2009). Which Way is “Up” in Upgrading? Trajectories of Change in the Value Chain for South African Wine. *World Development, 37*(10), 1637–1650.
+- Raju, S., & Sharma, C. (2024). Making Production-linked Incentive Scheme Work. *Economic and Political Weekly, 59*(34). 
+- Ray, S., & Miglani, S. (2020). India’s GVC integration: An analysis of upgrading efforts and facilitation of lead firms. *Working Paper*, No. 386. ICRIER, New Delhi.
+- Reddy, K., Chundakkadan, R., & Sasidharan, S. (2020). Firm innovation and global value chain participation. *Small Business Economics, 57*. 
+- Reddy, K., & Sasidharan, S. (2021). Financial constraints and global value chain participation: Firm-level evidence from India. *The Journal of International Trade & Economic Development, 30*(5), 1–27.
+- Roy, D., & Thorat, A. (2008). Success in High Value Horticultural Export Markets for the Small Farmers: The Case of Mahagrapes in India. *World Development, 36*(10), 1874–1890.
+- Rungi, A., & Del Prete, D. (2018). The smile curve at the firm level: Where value is added along supply chains. *Economics Letters, 164*, 38–42.
+- Stemberger, J., & Kejžar, K. Z. (2025). A firm-level analysis of global value chain participation effects. *Review of World Economics, 149*(3).
+- Thakur, R., & Sharma, S. (2025). Does global value chain participation and position lead to innovation in an emerging economy? Industry-level evidence from Indian manufacturing industries. *Journal of Business Research, 186*, 114989.
+- Tokatli, N., & Kizilgün, Ö. (2004). Upgrading in the Global Clothing Industry: Mavi Jeans and the Transformation of a Turkish Firm from FullPackage to BrandName Manufacturing and Retailing. *Economic Geography, 80*(3), 221–240. 
+- Trienekens, J. H., & van Dijk, M. P. (2012). Upgrading of Value Chains in Developing Countries. In M. P. van Dijk & J. Trienekens (Eds.), *Global Value Chains: Linking Local Producers from Developing Countries to International Markets* (pp. 237–250). Amsterdam University Press.
+- Urata, S., & Baek, Y. (2020). The Determinants of Participation in Global Value Chains: A Cross-Country, Firm-Level Analysis. *ADBI Working Papers*, 1116. Tokyo: Asian Development Bank Institute.
+- Van der Marel, E. (2015). Positioning on the global value chain map: Where do you want to be? *ECIPE Occasional Paper*, No. 01/2015. European Centre for International Political Economy (ECIPE), Brussels.
+- Zhu, S., & Fu, X. (2013). Drivers of Export Upgrading. *World Development, 51*, 221–233.
+
+\newpage
+
+# Appendix
+
+## i. Software & Packages Used
+
+All data processing and empirical analysis were conducted in R. The *tidyverse* suite was used for data cleaning and manipulation, while *prodest* was employed for the estimation of total factor productivity. Regression analysis was carried out using the *fixest* package, and model outputs and tables were generated using *modelsummary* and formatted using *kableExtra*. The *broom* package was used to tidy model outputs and extract coefficients for further analysis and visualization. Data visualization was performed using *ggplot2* and *ggrepel*. Diagnostic tests and robustness checks were conducted using the *plm* and *lmtest* packages, particularly for panel data diagnostics, along with *car* for multicollinearity analysis. Correlation analysis was supported by the *corrplot* package.
+
+## ii. NIC-OECD Concordance Map
+
+To construct the measure of forward participation, we map NIC industries to OECD sectors primarily at the 2-digit level via ISIC concordance (with a few exceptions at the 3–4 digit level). Since intermediate export shares from the OECD ICIO Tables are not consistently available across all industries and years, we apply a concordance based on OECD sectoral aggregation, grouping industries with similar production structures and assigning a common intermediate export share within each group. This ensures a consistent measure of forward GVC participation without arbitrarily excluding important industries.
+
+```{r tab-concordance-chart}
+
+datasummary_df(
+  manuf_mapping,
+  title = 'NIC-OECD Concordance Map',
+  output = 'kableExtra',
+  longtable = TRUE                                    # prints over multiple pages if required
+) %>%
+  kable_styling(latex_options = 'repeat_header') %>%  # repeats header over multiple pages
+  column_spec(4:5, width = '5cm')                     # forces text (in cols 4-5) to fit in given space
+
+```
+
+
+## iii. Sample Summary Statistics of Estimated Models
+
+Tables 15-28 present summary statistics for the estimation samples used across the different model specifications. Since each regression is estimated on a slightly different subsample (due to limited data availability for key variables), the composition of observations varies across models. Reporting model-specific summary statistics ensures transparency regarding these differences and allows for a clearer interpretation of the results.
+
+### a. Productivity
+
+```{r tab-sample-prod1}
+
+datasummary_df(
+  sample_prod1,
+  title = 'Sample Statistics for Productivity (Industry & Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+
+```
+
+```{r tab-sample-prod2}
+datasummary_df(
+  sample_prod2,
+  title = 'Sample Statistics for Productivity (Industry-Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+```{r tab-sample-prod3}
+datasummary_df(
+  sample_prod3,
+  title = 'Sample Statistics for Productivity (Firm FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+### b. Credit Access: Liquidity
+
+```{r tab-sample-liq1}
+datasummary_df(
+  sample_liq1,
+  title = 'Sample Statistics for Liquidity (Industry & Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+```{r tab-sample-liq2}
+datasummary_df(
+  sample_liq2,
+  title = 'Sample Statistics for Liquidity (Industry-Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+```{r tab-sample-liq3}
+datasummary_df(
+  sample_liq3,
+  title = 'Sample Statistics for Liquidity (Firm FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+### c. Credit Access: Leverage
+
+```{r tab-sample-lev1}
+datasummary_df(
+  sample_lev1,
+  title = 'Sample Statistics for Leverage (Industry & Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+```{r tab-sample-lev2}
+datasummary_df(
+  sample_lev2,
+  title = 'Sample Statistics for Leverage (Industry-Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+```{r tab-sample-lev3}
+datasummary_df(
+  sample_lev3,
+  title = 'Sample Statistics for Leverage (Firm FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+### d. Capability
+
+```{r tab-sample-capab1}
+datasummary_df(
+  sample_capab1,
+  title = 'Sample Statistics for Capability (Industry & Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+```{r tab-sample-capab2}
+datasummary_df(
+  sample_capab2,
+  title = 'Sample Statistics for Capability (Industry-Year FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+```{r tab-sample-capab3}
+datasummary_df(
+  sample_capab3,
+  title = 'Sample Statistics for Capability (Firm FE)',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position')
+```
+
+### e. ICT
+
+```{r tab-sample-advict}
+datasummary_df(
+  sample_advict,
+  title = 'Sample Statistics for Advertising × ICT',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position') 
+```
+
+```{r tab-sample-innovict}
+datasummary_df(
+  sample_innovict,
+  title = 'Sample Statistics for Innovation × ICT',
+  fmt = 2,
+  output = 'kableExtra'
+) %>%
+  kable_styling(latex_options = 'HOLD_position') 
+```
+
+\newpage
+
+# Comment Sheet
+
+\vspace{2cm}
+
+\begin{center}
+\begin{tabular}{|p{0.10\textwidth}|p{0.20\textwidth}|p{0.45\textwidth}|p{0.15\textwidth}|}
+\hline
+\textbf{Roll No.} & \textbf{Student's Name} & \textbf{Broad Area/Topic} & \textbf{Supervisor} \\ \hline
+59 & Srikanya Chakraborty & The Drivers of GVC Position: A Firm-Level Study of Indian Manufacturing & Dr. Muhammed Rafi OPC \\ \hline
+\end{tabular}
+\end{center}
+
+\vspace{2cm}
+
+\begin{center}
+\begin{tabular}{|p{0.10\textwidth}|p{0.40\textwidth}|p{0.40\textwidth}|}
+\hline
+\textbf{S. No.} & \textbf{Comments} & \textbf{Response} \\ \hline
+1 & Try adding more controls in the analysis. Do a literature review and see, apart from innovation/R\&D investment, what are the other controls impacting GVC productivity. & The suggestion has been incorporated (Section 5.4.1). \\ \hline
+2 & If time permits, you can expand by checking the impact of upstream and downstream position in separate model & The suggestion could not be incorporated due to time constraints. Consequently, this is a direction for future research in this domain. \\ \hline
+\end{tabular}
+\end{center}
+
+\newpage
+
+# Plagiarism Report
+
+```{r fig-plagreport, out.width='100%', fig.pos='H'}
+knitr::include_graphics('F:/r/thesis-gvc-position/documents/report-plagiarism.jpg')
+```
+
+\newpage
+
+# AI Report
+
+```{r fig-aireport, out.width='100%', fig.pos='H'}
+knitr::include_graphics('F:/r/thesis-gvc-position/documents/report-ai.jpg')
+```
